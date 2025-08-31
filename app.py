@@ -1,8 +1,6 @@
 from flask import Flask, request, send_file, render_template_string, url_for
 import subprocess
 import tempfile
-import os
-import glob
 import pathlib
 import uuid
 import time
@@ -66,7 +64,7 @@ HTML_SUCCESS = """
   <p><a href="{{ home_url }}">⬅️ Generate another report</a></p>
 
   <h3>Process Log</h3>
-  <pre style="background:#f0f0f0; padding:10px; border:1px solid #ccc;">
+  <pre style="background:#f0f0f0; padding:10px; border:1px solid #ccc; white-space:pre-wrap;">
 {{ logs }}
   </pre>
 </body>
@@ -84,7 +82,7 @@ def cleanup_old_reports():
             if now - mtime > MAX_AGE_SECONDS:
                 shutil.rmtree(subdir)
         except Exception:
-            pass  # don’t crash if cleanup fails
+            pass  # ignore cleanup errors
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -114,11 +112,19 @@ def index():
                 error="Scraper/Stats failed:\n" + logs,
             )
 
-        pdfs = glob.glob(str(run_dir / "*.pdf"))
-        if not pdfs:
-            return render_template_string(HTML_FORM, error="No PDF was generated.\n\n" + logs)
+        # Parse PDF_FILE marker from runner output
+        pdf_path = None
+        for line in result.stdout.splitlines():
+            if line.startswith("PDF_FILE:"):
+                pdf_path = pathlib.Path(line.split("PDF_FILE:")[1].strip())
+                break
 
-        pdf_path = pathlib.Path(pdfs[0])
+        if not pdf_path or not pdf_path.exists():
+            return render_template_string(
+                HTML_FORM,
+                error="No PDF was generated.\n\n" + logs,
+            )
+
         download_url = url_for("download_file", run_id=run_id, filename=pdf_path.name)
 
         return render_template_string(
