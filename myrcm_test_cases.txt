@@ -1,0 +1,27 @@
+
+# Vanilla 10 drivers 1:8 45 minute final 
+https://myrcm.ch/myrcm/report/en/88811/365281# Final A
+
+# 12 drivers 45 minute final
+https://myrcm.ch/myrcm/report/en/88811/365280# A Final 
+
+# race with 9 drivers but one DNS - chart lines drawn at correct finishing position?
+https://myrcm.ch/myrcm/report/en/88236/363522# Final E
+
+# final run 2 of 5 min race
+https://myrcm.ch/myrcm/report/en/87693/361810# Final A run 2
+
+# Last Chance Final A
+https://myrcm.ch/myrcm/report/en/89785/367999 Last Chance Final A
+
+# Race with 9 drivers only - chart lines drawn at correct finishing position? Lap 0 handled correctly?
+https://myrcm.ch/myrcm/report/en/87792/362095 "1/2 Final B"
+
+# Race with 11 drivers, driver 11 with zero laps
+https://myrcm.ch/myrcm/report/en/87792/362094# "1/2 Final A"
+
+# Race no track position data on myrcm.ch page - are positions constructed correctly?
+https://myrcm.ch/myrcm/report/en/89785/367999# Final A
+
+# Race with only three drivers
+https://myrcm.ch/myrcm/report/en/87792/362093 Final A
