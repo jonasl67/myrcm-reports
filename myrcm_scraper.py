@@ -160,12 +160,13 @@ def scrape_race_data(start_url, query_str):
                 max_laps = 0
                 num_drivers = len(driver_names)
                 
-                # First pass: Collect all lap data from all tables
                 for i, lap_table in enumerate(all_tables[1:]):
                     prev_element = lap_table.find_previous_sibling()
-                    if prev_element and "Records" in prev_element.text:
-                        print("Found 'Records' section. Stopping data writing.", file=sys.stderr)
-                        break
+                    if prev_element:
+                        text = prev_element.get_text(strip=True).lower()
+                        if "records" in text or "corrections" in text:
+                            print(f"Found '{prev_element.get_text(strip=True)}' section. Stopping laps data data writing.", file=sys.stderr)
+                            break
 
                     # Get lap headers and data for the current driver's table
                     lap_header = [th.text.strip() for th in lap_table.find_all("th")]
