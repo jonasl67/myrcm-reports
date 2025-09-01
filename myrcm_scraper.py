@@ -38,7 +38,7 @@ def scrape_race_data(start_url, query_str):
                 report_candidates.append(match.groups())  # (url, name)
 
         if not report_candidates:
-            print("No reports found on page.", file=sys.stderr)
+            print("No valid reports found on page. Make sure you paste the link/URL to a myrcm page for the event and class you are interested in. For example https://myrcm.ch/myrcm/report/en/87328/360726#", file=sys.stderr)
             return
 
         # Build query string from all CLI args after URL

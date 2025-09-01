@@ -1,10 +1,11 @@
-from flask import Flask, request, send_file, render_template_string, url_for
+from flask import Flask, request, render_template_string, url_for, Response
 import subprocess
 import tempfile
 import pathlib
 import uuid
 import time
 import shutil
+import os
 
 app = Flask(__name__)
 
@@ -19,38 +20,125 @@ HTML_FORM = """
 <html>
 <head>
   <title>RC Race Report Generator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: white;
+      color: #333;
+      text-align: center;
+    }
+    .header {
+      width: 100%;
+      background-color: #4CAF50; /* brighter green */
+      text-align: center;
+      padding: 20px 0;
+    }
+    .header img {
+      max-height: 120px;
+    }
+    .title {
+      font-size: 1.8em;
+      margin: 20px 0;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    .form-box {
+      display: inline-block;
+      border: 2px solid #4CAF50;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      max-width: 600px;
+      background-color: #fafafa;
+      text-align: left;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+    input[type="text"] {
+      width: 95%;
+      padding: 8px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    button:hover {
+      background-color: #388E3C;
+    }
+    h2 {
+      text-align: left;
+      color: #4CAF50;
+      margin-top: 0;
+    }
+    .disclaimer {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    #loading {
+      color: blue;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h2>RC Race Report Generator</h2>
-  <p style="color:darkred; font-weight:bold;">
-    This is a free service that comes with no warranties!
-  </p>
-  <p>
-    By providing the link (URL) to a <code>myrcm.ch</code> race page and specifying which final you
-    are interested in, you will receive a PDF report with a lap chart and other statistics
-    for the race/final.
-  </p>
-  <p>
-    <b>Instructions:</b><br>
-    1. Find the <code>myrcm.ch</code> page for the race and class you are interested in,
-       copy the address (URL) of the page and paste it into the first field below.<br>
-    2. In the second field, write the name of the race you want the report for,
-       for example <i>"Final A"</i>.
-  </p>
 
-  <form method="post" onsubmit="document.getElementById('loading').style.display='block'">
-    Race URL: <input type="text" name="url" size="60"><br><br>
-    Report (e.g. "Final A run 2"): <input type="text" name="query" size="40"><br><br>
-    <button type="submit">Generate PDF</button>
-  </form>
+  <div class="header">
+    <img src="{{ url_for('static', filename='logo_small.jpg') }}" alt="Balthazar RC Logo">
+  </div>
 
-  <p id="loading" style="display:none; color:blue; font-weight:bold;">
-    ⏳ Processing, please wait...
-  </p>
+  <div class="title">Welcome to Balthazar RC's race reports page</div>
 
-  {% if error %}
-    <p style="color:red; white-space:pre-wrap;">{{ error }}</p>
-  {% endif %}
+  <div class="form-box">
+    <h2>Race Report – lapchart and statistics</h2>
+    <p class="disclaimer">
+      This is a free service that comes with no warranties!
+    </p>
+    <p>
+      By providing the link (URL) to a <code>myrcm.ch</code> race page for the class you are interested in 
+      and specifying which final you want the report for, you will receive a PDF report with a lap chart and statistics
+      on time lost to fuel stops, events and incidents.
+    </p>
+
+    <form method="post" onsubmit="
+      document.getElementById('loading').style.display='block';
+      var err = document.getElementById('error');
+      if (err) { err.innerHTML = ''; }
+    ">
+
+      <label>1. Paste the URL from <code>myrcm.ch</code> for the race and class:</label>
+      <input type="text" name="url" size="60">
+
+      <label>2. Enter the name of the final (for example <i>"Final A"</i>):</label>
+      <input type="text" name="query" size="40">
+
+      <button type="submit">Generate PDF</button>
+    </form>
+
+    <p id="loading" style="display:none;">⏳ Processing, please wait...</p>
+
+    {% if error %}
+      <p id="error" style="color:red; white-space:pre-wrap;">{{ error }}</p>
+    {% else %}
+      <p id="error"></p>
+    {% endif %}
+  </div>
+
 </body>
 </html>
 """
@@ -61,22 +149,41 @@ HTML_SUCCESS = """
 <head>
   <title>Report Ready</title>
 </head>
-<body>
-  <h2>Your Report is Ready ✅</h2>
-  <p>
-    <a href="{{ download_url }}" download>
-      <button type="button">⬇️ Download PDF</button>
-    </a>
-  </p>
-  <p><a href="{{ home_url }}">⬅️ Generate another report</a></p>
+<body style="margin-left: 40px;">
 
-  <h3>Process Log</h3>
-  <pre style="background:#f0f0f0; padding:10px; border:1px solid #ccc; white-space:pre-wrap;">
+  <!-- Green banner with logo -->
+  <div style="background-color:#00c853; padding:20px; text-align:center;">
+    <img src="{{ url_for('static', filename='logo_small.jpg') }}" alt="Logo" style="max-height:100px;">
+  </div>
+
+  <!-- Page title -->
+  <h1 style="text-align:center; margin-top:10px;">
+    Welcome to Balthazar RC's race reports page
+  </h1>
+
+  <div style="max-width:700px; margin:20px auto; border:2px solid #00c853; padding:20px; border-radius:8px; background:#fff;">
+    <h2 style="color:#00c853; text-align:left;">Race Report - lapchart and statistics</h2>
+
+    <h2>Your Report is Ready ✅</h2>
+    <p>
+      <a href="{{ download_url }}" download>
+        <button type="button">⬇️ Download PDF</button>
+      </a>
+    </p>
+    <p><a href="{{ home_url }}">⬅️ Generate another report</a></p>
+
+    <!-- Collapsible process log -->
+    <details style="margin-top:20px;">
+      <summary style="cursor:pointer; font-weight:bold; color:#333;">Show process log</summary>
+      <pre style="background:#f0f0f0; padding:10px; border:1px solid #ccc; white-space:pre-wrap; margin-top:10px;">
 {{ logs }}
-  </pre>
+      </pre>
+    </details>
+  </div>
 </body>
 </html>
 """
+
 
 def cleanup_old_reports():
     """Delete report folders older than MAX_AGE_SECONDS."""
@@ -119,17 +226,23 @@ def index():
             )
 
         # Look for PDF_FILE marker in stdout
-        pdf_path = None
+        pdf_filename = None
         for line in result.stdout.splitlines():
             if line.startswith("PDF_FILE:"):
-                pdf_path = pathlib.Path(line.split("PDF_FILE:", 1)[1].strip())
+                pdf_filename = line.split("PDF_FILE:", 1)[1].strip()
                 break
 
-        # Ensure PDF actually exists
-        if not pdf_path or not pdf_path.exists():
+        if not pdf_filename:
             return render_template_string(
                 HTML_FORM,
                 error="No PDF was generated.\n\n" + logs,
+            )
+
+        pdf_path = run_dir / pdf_filename
+        if not pdf_path.exists():
+            return render_template_string(
+                HTML_FORM,
+                error="Generated PDF not found in run directory.\n\n" + logs,
             )
 
         download_url = url_for("download_file", run_id=run_id, filename=pdf_path.name)
@@ -144,12 +257,36 @@ def index():
 
     return render_template_string(HTML_FORM, error=None)
 
+
 @app.route("/download/<run_id>/<filename>")
 def download_file(run_id, filename):
     file_path = OUTPUT_DIR / run_id / filename
     if not file_path.exists():
-        return "File not found", 404
-    return send_file(file_path, as_attachment=True)
+        return f"File not found: {file_path}", 404
 
+    try:
+        with open(file_path, "rb") as f:
+            data = f.read()
+    except Exception as e:
+        return f"Failed to read PDF file: {e}", 500
+
+    response = Response(data, mimetype="application/pdf")
+
+    # Force download with safe filename
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    # Explicit length is critical for Chrome
+    response.headers["Content-Length"] = str(len(data))
+
+    # Conservative caching headers
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    return response
+
+
+    
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5050))  # 5050 for local dev
+    app.run(host="0.0.0.0", port=port)

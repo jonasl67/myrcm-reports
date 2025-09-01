@@ -6,3 +6,5 @@ reportlab
 lxml
 pandas
 numpy
+os
+pathlib

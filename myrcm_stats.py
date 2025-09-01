@@ -16,6 +16,7 @@ import re
 import math
 import pandas as pd
 import numpy as np
+import pathlib
 
 # ReportLab imports
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Frame, PageTemplate
@@ -503,7 +504,14 @@ if not summary_df.empty:
     summary_df.sort_values(by=["Pos"], inplace=True)
 
 # ---------------- PDF Report ----------------
-pdf_name = os.path.splitext(os.path.basename(csv_file))[0] + ".pdf"
+#pdf_name = os.path.splitext(os.path.basename(csv_file))[0] + ".pdf"
+#margin = 25
+
+if len(sys.argv) >= 3 and not sys.argv[2].startswith("--"):
+    pdf_path = pathlib.Path(sys.argv[2])
+else:
+    pdf_path = pathlib.Path(os.path.splitext(os.path.basename(csv_file))[0] + ".pdf")
+
 margin = 25
 
 def add_header_and_footer(canvas, doc):
@@ -514,7 +522,7 @@ def add_header_and_footer(canvas, doc):
     canvas.restoreState()
 
 # Create a SimpleDocTemplate instance
-doc = SimpleDocTemplate(pdf_name, pagesize=landscape(A4),
+doc = SimpleDocTemplate(str(pdf_path), pagesize=landscape(A4),
                         leftMargin=margin, rightMargin=margin,
                         topMargin=margin, bottomMargin=margin)
 
@@ -785,10 +793,7 @@ if verbose_log:
 
 # ---------------- Build PDF ----------------
 doc.build(elements)
-print(f"PDF written to: {pdf_name if (pdf_name := os.path.splitext(os.path.basename(csv_file))[0] + '.pdf') else '<unknown>'}", file=sys.stderr)
-print(pdf_name, file=sys.stdout)
-
-
+print(f"PDF written to {pdf_path}", file=sys.stderr)
 
 # Print verbose log to stdout if requested
 if verbose and verbose_log:
