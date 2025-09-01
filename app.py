@@ -38,11 +38,15 @@ HTML_FORM = """
        for example <i>"Final A"</i>.
   </p>
 
-  <form method="post">
+  <form method="post" onsubmit="document.getElementById('loading').style.display='block'">
     Race URL: <input type="text" name="url" size="60"><br><br>
     Report (e.g. "Final A run 2"): <input type="text" name="query" size="40"><br><br>
     <button type="submit">Generate PDF</button>
   </form>
+
+  <p id="loading" style="display:none; color:blue; font-weight:bold;">
+    ⏳ Processing, please wait...
+  </p>
 
   {% if error %}
     <p style="color:red; white-space:pre-wrap;">{{ error }}</p>
@@ -59,8 +63,11 @@ HTML_SUCCESS = """
 </head>
 <body>
   <h2>Your Report is Ready ✅</h2>
-  <p>You can download it here:</p>
-  <p><a href="{{ download_url }}">{{ filename }}</a></p>
+  <p>
+    <a href="{{ download_url }}" download>
+      <button type="button">⬇️ Download PDF</button>
+    </a>
+  </p>
   <p><a href="{{ home_url }}">⬅️ Generate another report</a></p>
 
   <h3>Process Log</h3>
@@ -95,7 +102,6 @@ def index():
         if not url or not query:
             return render_template_string(HTML_FORM, error="Both URL and report name are required.")
 
-        # Each run gets its own unique subdir in OUTPUT_DIR
         run_id = str(uuid.uuid4())
         run_dir = OUTPUT_DIR / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -112,13 +118,14 @@ def index():
                 error="Scraper/Stats failed:\n" + logs,
             )
 
-        # Parse PDF_FILE marker from runner output
+        # Look for PDF_FILE marker in stdout
         pdf_path = None
         for line in result.stdout.splitlines():
             if line.startswith("PDF_FILE:"):
-                pdf_path = pathlib.Path(line.split("PDF_FILE:")[1].strip())
+                pdf_path = pathlib.Path(line.split("PDF_FILE:", 1)[1].strip())
                 break
 
+        # Ensure PDF actually exists
         if not pdf_path or not pdf_path.exists():
             return render_template_string(
                 HTML_FORM,
