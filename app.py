@@ -6,6 +6,7 @@ import uuid
 import time
 import shutil
 import os
+import logging
 
 app = Flask(__name__)
 
@@ -99,7 +100,7 @@ HTML_FORM = """
 <body>
 
   <div class="header">
-    <img src="{{ url_for('static', filename='logo_small.jpg') }}" alt="Balthazar RC Logo">
+    <img src="{{ url_for('static', filename='logo_small.png') }}" alt="Balthazar RC Logo">
   </div>
 
   <div class="title">Welcome to Balthazar RC's race reports page</div>
@@ -184,6 +185,20 @@ HTML_SUCCESS = """
 </html>
 """
 
+# Create a dedicated logger for usage
+usage_logger = logging.getLogger("usage")
+usage_logger.setLevel(logging.INFO)
+
+# Create a file handler for usage.log
+fh = logging.FileHandler("usage.log")
+fh.setLevel(logging.INFO)
+
+# Define format
+formatter = logging.Formatter("%(asctime)s - %(message)s")
+fh.setFormatter(formatter)
+
+# Add handler to logger (not to root)
+usage_logger.addHandler(fh)
 
 def cleanup_old_reports():
     """Delete report folders older than MAX_AGE_SECONDS."""
@@ -197,6 +212,20 @@ def cleanup_old_reports():
                 shutil.rmtree(subdir)
         except Exception:
             pass  # ignore cleanup errors
+
+@app.before_request
+def log_usage():
+    if request.endpoint == "index" and request.method == "POST":
+        user_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        user_agent = request.headers.get("User-Agent", "unknown")
+        submitted_url = request.form.get("url", "").strip()
+
+        log_line = f"UserIP={user_ip} Agent={user_agent}"
+        if submitted_url:
+            log_line += f" URL={submitted_url}"
+
+        usage_logger.info(log_line)
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
