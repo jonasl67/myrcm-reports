@@ -194,8 +194,18 @@ try:
 
     # collect summary block rows: look for rows where col[1] numeric and col[3] name exists
     for row in all_lines:
-        if len(row) >= 4 and row[1].strip().isdigit() and row[3].strip():
-            raw_driver_info.append((row[3].strip(), row[1].strip()))
+        if (
+            len(row) >= 6
+            and row[1].strip().isdigit()
+            and row[3].strip()
+            and row[5].strip().isdigit()
+        ):
+            driver_name = row[3].strip()
+            car_no = row[1].strip()
+            laps = int(row[5].strip())
+            raw_driver_info.append((driver_name, car_no, laps))
+        #if len(row) >= 4 and row[1].strip().isdigit() and row[3].strip():
+        #    raw_driver_info.append((row[3].strip(), row[1].strip()))
 except FileNotFoundError:
     print(f"File not found: {csv_file}", file=sys.stderr)
     sys.exit(1)
@@ -221,9 +231,9 @@ header_names = df.columns[1:].tolist()
 driver_lookup = {}
 for idx, driver in enumerate(header_names):
     if idx < len(raw_driver_info):
-        driver_lookup[driver] = raw_driver_info[idx]
+        driver_lookup[driver] = raw_driver_info[idx] # (full_name, car_number, laps)
     else:
-        driver_lookup[driver] = (driver, "?")
+        driver_lookup[driver] = (driver, "?", 0)
 
 
 # ---------------- Build driver lap data (include all drivers) ----------------
@@ -239,12 +249,14 @@ for col_idx, driver in enumerate(header_names, start=1):
         t = parse_lap_entry(e)
         if not (isinstance(t, float) and math.isnan(t)):
             parsed_times.append(t)
-    full_name, car_no = driver_lookup.get(driver, (driver, "?"))
+    #full_name, car_no = driver_lookup.get(driver, (driver, "?"))
+    full_name, car_no, official_laps = driver_lookup.get(driver, (driver, "?", 0))
     driver_lap_data[driver] = {
         "raw_entries": raw_entries,
         "lap_times": np.array(parsed_times),
         "full_name": full_name,
-        "car_number": car_no
+        "car_number": car_no,
+        "no_of_laps": official_laps
     }
 
 # ---------------- Determine orders ----------------
@@ -325,10 +337,12 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
     lap_times = data["lap_times"]
     full_name = data["full_name"]
     car_no = data["car_number"]
-    
-    n_laps = len(lap_times)
-    if n_laps > 0: # Correct the lap count by excluding the initial lap 0
-        n_laps -= 1
+    n_laps = data["no_of_laps"]
+
+    # calc total number of laps for driver
+    #n_laps = len(lap_times)
+    #if n_laps > 0: # Correct the lap count by excluding the initial lap 0
+    #    n_laps -= 1
     
     total_time = float(np.sum(lap_times)) if n_laps > 0 else 0.0
 
@@ -518,7 +532,7 @@ def add_header_and_footer(canvas, doc):
     """Draws a footer at the bottom right of each page."""
     canvas.saveState()
     canvas.setFont('Helvetica', 8)
-    canvas.drawRightString(doc.pagesize[0] - doc.rightMargin, doc.bottomMargin, "Balthazar RC")
+    canvas.drawRightString(doc.pagesize[0] - doc.rightMargin, doc.bottomMargin, "(C) Balthazar RC")
     canvas.restoreState()
 
 # Create a SimpleDocTemplate instance
@@ -541,7 +555,7 @@ center_bold = ParagraphStyle("CenterBold", parent=styles["Normal"], alignment=TA
 
 elements = []
 
-#elements.append(Paragraph("Race Summary: An analysis of myrcm data", styles["Heading1"]))
+#elements.append(Paragraph("Race Summary: An analysis of myrcm race data", styles["Heading1"]))
 title = "Race Summary: "
 if race_event:
     title = title + race_event + " "
@@ -563,14 +577,14 @@ custom_note_style = ParagraphStyle(
 
 note_text = (
     "<b>Disclaimer - This is not an official myrcm.ch report!</b><br/>"
-    "This report is purely based on the data published on myrcm.ch for the race. "
-    "Automated software has generated the report. The software makes a lot of "
+    "This report is purely based on the data published on myrcm.ch for the race, "
+    "automated software has generated the report from the data. The software makes a lot of "
     "assumptions based on typical 1/8 and 1/10 nitro rc car on-road races to arrive "
     "at the information presented in the summary table and event log. "
-    "Discriminate between fuel stops and other events and incidents purely based on lap times is especially difficult, "
-    "hence the fuel stop information is less reliable the more incidents the driver had. "
+    "To discriminate between fuel stops and other events and incidents purely based on lap times is especially difficult, "
+    "hence the fuel stop information is less reliable the more incidents the driver had during the race. "
     "The track position chart is based on official myrcm data when available, or by "
-    "calculating positions from lap times when offical track positions are not avaialble."
+    "calculating positions from lap times when track positions are not made avaialble."
 )
 
 elements.append(Spacer(1, 16))

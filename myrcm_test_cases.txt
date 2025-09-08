@@ -25,3 +25,6 @@ https://myrcm.ch/myrcm/report/en/89785/367999# Final A
 
 # Race with only three drivers
 https://myrcm.ch/myrcm/report/en/87792/362093 Final A
+
+# Race with no track positions posted on myrcm and with lap times > 1 minute, shall still produce track positions correctly
+https://myrcm.ch/myrcm/report/en/90116/368865 Final A

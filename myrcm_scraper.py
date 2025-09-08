@@ -228,11 +228,24 @@ def scrape_race_data(start_url, query_str):
                         for idx, cell in enumerate(lap_times):
                             if cell.strip():
                                 try:
-                                    lap_time_val = float(cell)
+                                    if ":" in cell:
+                                        parts = cell.split(":")
+                                        if len(parts) == 2:
+                                            minutes = int(parts[0])
+                                            seconds = float(parts[1])
+                                            lap_time_val = minutes * 60 + seconds
+                                        else:
+                                            raise ValueError(f"Unexpected lap time format: {cell}")
+                                    else:
+                                        lap_time_val = float(cell)
+
                                     accumulated_times[idx] += lap_time_val
                                     times_with_idx.append((accumulated_times[idx], idx, cell.strip()))
-                                except ValueError:
-                                    pass
+
+                                except ValueError as e:
+                                    print(f"❌ Failed to parse lap time '{cell}' at driver {idx+1}, lap {lap_num}: {e}", file=sys.stderr)
+                                    sys.exit(1)
+
                             else:
                                 # No lap, keep accumulated time as-is (driver DNF or pit still counted)
                                 pass
