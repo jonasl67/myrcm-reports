@@ -261,12 +261,10 @@ for col_idx, driver in enumerate(header_names, start=1):
 
 # ---------------- Determine orders ----------------
 # finishing order: prefer the summary/top block order (header order). Keep only drivers present.
-#finishing_order = [driver for driver in header_names if driver in driver_lap_data]
 # Filter out 'Unnamed:' drivers before determining order
 filtered_headers = [d for d in header_names if not re.match(r'Unnamed: \d+', d)]
 finishing_order = [driver for driver in filtered_headers if driver in driver_lap_data]
 starting_order = sorted(finishing_order, key=lambda a: safe_int(driver_lap_data[a]["car_number"], default=9999))
-
 
 # starting order: sort by numeric car number if possible (car #1 top)
 starting_order = sorted(finishing_order, key=lambda a: safe_int(driver_lap_data[a]["car_number"], default=9999))
@@ -338,11 +336,6 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
     full_name = data["full_name"]
     car_no = data["car_number"]
     n_laps = data["no_of_laps"]
-
-    # calc total number of laps for driver
-    #n_laps = len(lap_times)
-    #if n_laps > 0: # Correct the lap count by excluding the initial lap 0
-    #    n_laps -= 1
     
     total_time = float(np.sum(lap_times)) if n_laps > 0 else 0.0
 
@@ -359,9 +352,9 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
         avg_clean_lap = 0.0
 
 
-    # classification pass as before (fuel stops, tire changes, incidents)
+    # classification pass (fuel stops, tire changes, incidents)
     fuel_stops_idx = [] # use a list for indices of all fuel stops
-    normal_fuel_stop_deltas = [] # new list to store deltas of non-pitstop fuel stops
+    normal_fuel_stop_deltas = [] #  list to store deltas of fuel stops
     tire_changes = []
     major_incidents = []
     minor_incidents = []
@@ -374,10 +367,10 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
     
     # use the parsed lap_times sequence for classification
     last_event = None
-    for i, lt in enumerate(lap_times):
+    for i, laptime in enumerate(lap_times):
         prev_time = current_time
-        current_time += lt
-        delta = lt - avg_clean_lap
+        current_time += laptime
+        delta = laptime - avg_clean_lap
         event = None
         
         # Determine average fuel lap time lost for re-classification logic
@@ -385,12 +378,29 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
         time_since_fuel = current_time - last_fuel_time
         avg_fuel_delta = avg_normal_fuel_lap_lost_time if avg_normal_fuel_lap_lost_time else 0.0
 
-        # first capture major events / lap time deltas, assume the driver got fuel during such long delays
+        # first capture major events / lap time deltas, default is to assume the driver got fuel during such long delays
         if delta >= MAJOR_EVENT_THRESHOLD:
+            race_time_left = race_duration_sec - current_time
+            time_to_next_fuel = STANDARD_FUEL_STINT - (current_time - last_fuel_time)
+
+            # Default assumption: fueling happened
             event = "MAJOR EVENT + FUEL"
+            do_fuel = True
+
+            # Exception 1: Not enough race left to justify fueling
+            if race_time_left < time_to_next_fuel:
+                event = "MAJOR EVENT"
+                do_fuel = False
+
+            # Exception 2: Happens within first minute of race (start carnage)
+            elif current_time < 60:
+                event = "MAJOR EVENT"
+                do_fuel = False
+
             major_incidents.append(i)
-            fuel_stops_idx.append(i)
             major_time_lost += max(0.0, delta)
+            if do_fuel:
+                fuel_stops_idx.append(i)
 
         # capture fuel stops
         elif (
@@ -428,7 +438,7 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
             before_pos = lap_positions[driver][i-1] if i > 0 else lap_positions[driver][0]
             after_pos = lap_positions[driver][i]
             
-            log_line = f"Lap {i+1} completed at={format_time_mm_ss(current_time)}, {event}, lap time={format_log_time(lt)}, time lost={format_log_time(delta)}"
+            log_line = f"Lap {i+1} completed at={format_time_mm_ss(current_time)}, {event}, lap time={format_log_time(laptime)}, time lost={format_log_time(delta)}"
             
             if "FUEL" in event:
                 time_of_fueling = prev_time + (avg_clean_lap / 2.0)
@@ -481,10 +491,10 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
     # fuel intervals
     fuel_times = []
     accum = 0.0
-    for i, lt in enumerate(lap_times):
-        accum += lt
+    for i, laptime in enumerate(lap_times):
+        accum += laptime
         if i in fuel_stops_idx:
-            fuel_times.append(max(0.0, accum - lt + avg_clean_lap/2.0))
+            fuel_times.append(max(0.0, accum - laptime + avg_clean_lap/2.0))
 
     fuel_intervals = np.diff([0.0] + fuel_times) if fuel_times else np.array([])
     avg_fuel_interval = float(np.mean(fuel_intervals)) if fuel_intervals.size else 0.0
@@ -498,7 +508,6 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
         "Pos": pos_idx,
         "Driver (Nr)": display,
         "Laps": n_laps,
-        #"Race Time": format_time_mm_ss(total_time),
         "Race Time": format_time_mm_ss_decimal(total_time),
         "90 percentile lap": f"{avg_clean_lap:.2f}" if avg_clean_lap else "0.00",
         "Fuel Stops": len(fuel_stops_idx),
@@ -581,8 +590,8 @@ note_text = (
     "automated software has generated the report from the data. The software makes a lot of "
     "assumptions based on typical 1/8 and 1/10 nitro rc car on-road races to arrive "
     "at the information presented in the summary table and event log. "
-    "To discriminate between fuel stops and other events and incidents purely based on lap times is especially difficult, "
-    "hence the fuel stop information is less reliable the more incidents the driver had during the race. "
+    "Identifying fuel stops and other events by purely analyzing lap times is unreliable because the analysis relies on a "
+    "baseline of lap times from an uneventful race. This means the more incidents a driver has during a race, the less reliable the fuel stop information will be. "
     "The track position chart is based on official myrcm data when available, or by "
     "calculating positions from lap times when track positions are not made avaialble."
 )

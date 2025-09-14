@@ -111,7 +111,7 @@ HTML_FORM = """
       This is a free service that comes with no warranties!
     </p>
     <p>
-      By providing the link (URL) to a <code>myrcm.ch</code> race page for the class you are interested in 
+      By providing the link (URL) to a <code>myrcm.ch</code> page for the race and class you are interested in 
       and specifying which final you want the report for, you will receive a PDF report with a lap chart and statistics
       on time lost to fuel stops, events and incidents.
     </p>
