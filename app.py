@@ -103,12 +103,13 @@ HTML_FORM = """
     <img src="{{ url_for('static', filename='logo_small.png') }}" alt="Balthazar RC Logo">
   </div>
 
-  <div class="title">Welcome to Balthazar RC's race reports page</div>
+  <div class="title">Welcome to Balthazar RC's nitro onroad race reports page</div>
 
   <div class="form-box">
     <h2>Race Report – lapchart and statistics</h2>
     <p class="disclaimer">
-      This is a free service that comes with no warranties!
+      This is a free service that comes with no warranties!<br><br>
+      Only onroad nitro 1/8 and 1/10 races are supported at this time, using the service for any other class will render incorrect data.
     </p>
     <p>
       By providing the link (URL) to a <code>myrcm.ch</code> page for the race and class you are interested in 
@@ -154,17 +155,10 @@ HTML_SUCCESS = """
 
   <!-- Green banner with logo -->
   <div style="background-color:#00c853; padding:20px; text-align:center;">
-    <img src="{{ url_for('static', filename='logo_small.jpg') }}" alt="Logo" style="max-height:100px;">
+    <img src="{{ url_for('static', filename='logo_small.png') }}" alt="Logo" style="max-height:100px;">
   </div>
 
-  <!-- Page title -->
-  <h1 style="text-align:center; margin-top:10px;">
-    Welcome to Balthazar RC's race reports page
-  </h1>
-
   <div style="max-width:700px; margin:20px auto; border:2px solid #00c853; padding:20px; border-radius:8px; background:#fff;">
-    <h2 style="color:#00c853; text-align:left;">Race Report - lapchart and statistics</h2>
-
     <h2>Your Report is Ready ✅</h2>
     <p>
       <a href="{{ download_url }}" download>

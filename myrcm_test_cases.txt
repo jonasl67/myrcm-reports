@@ -28,3 +28,6 @@ https://myrcm.ch/myrcm/report/en/87792/362093 Final A
 
 # Race with no track positions posted on myrcm and with lap times > 1 minute, shall still produce track positions correctly
 https://myrcm.ch/myrcm/report/en/90116/368865 Final A
+
+# Verify that everything works even if the user didn't start the provided URL with https://
+myrcm.ch/myrcm/report/en/90116/368866

@@ -290,7 +290,16 @@ if __name__ == "__main__":
         print("Example: python myrcm_scraper.py https://myrcm.ch/... Last Chance Final A 1")
         sys.exit(1)
 
-    url_arg = sys.argv[1]
+    url_arg = sys.argv[1].strip()
+
+    # Normalize: always force https://
+    if url_arg.startswith("http://"):
+        url_arg = "https://" + url_arg[len("http://"):]
+    elif not url_arg.startswith("https://"):
+        url_arg = "https://" + url_arg
+
+    print(f"(ℹ️  Normalized URL to: {url_arg})", file=sys.stderr)
+
     query_str = " ".join(sys.argv[2:])
     scrape_race_data(url_arg, query_str)
 
