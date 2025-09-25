@@ -249,7 +249,7 @@ HTML_FORM = """
         eventSelect.dispatchEvent(new Event("change"));
       } catch (e) {
         searchingMsg.style.display = "none";
-        showError("Event search exception: " + e);
+        showError("Event search exception (you may be behind a corporate web firewall/filtering/blocking service): " + e);
       }
     }
 
