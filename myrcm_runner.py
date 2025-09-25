@@ -13,7 +13,6 @@ Example:
 import sys
 import subprocess
 import pathlib
-import glob
 
 BASE_DIR = pathlib.Path(__file__).parent.resolve()
 
@@ -37,6 +36,14 @@ def main():
 
     stdout_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     stderr_lines = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+
+    # --- Handle scraper failures ---
+    if result.returncode == 2:
+        # Distinct exit for "no results tables found"
+        print("⚠️ No results available for this final.")
+        if stderr_lines:
+            print("stderr:\n" + "\n".join(stderr_lines))
+        sys.exit(2)
 
     if result.returncode != 0:
         print("❌ Scraper failed with non-zero exit code.")
@@ -77,10 +84,11 @@ def main():
             print("stderr:\n" + stats_result.stderr)
         sys.exit(1)
 
-    print(stats_result.stdout.strip())
-    print("✅ PDF report generation complete.")
-    print(f"PDF_FILE:{pdf_path.name}") # marker for Flask app
+    if stats_result.stdout.strip():
+        print(stats_result.stdout.strip())
 
+    print("✅ PDF report generation complete.")
+    print(f"PDF_FILE:{pdf_path.name}")  # marker for Flask app
 
     return str(pdf_path)
 

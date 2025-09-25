@@ -12,9 +12,9 @@ import os
 import logging
 import re
 import urllib.parse
-from datetime import datetime
 import csv
 import io
+from datetime import datetime, timezone
 
 TIMEOUT_SECONDS = 5  # timeout for myrcm.ch responses
 
@@ -546,12 +546,12 @@ def search_events():
     # --- Ongoing events ---
     try:
         ongoing_url = f"https://myrcm.ch/myrcm/main?hId[1]=evt&pLa=en&dFi={urllib.parse.quote(query)}&hId[1]=search"
-        print(f"🔎 Fetching ongoing events: {ongoing_url}")
+        #print(f"🔎 Fetching ongoing events: {ongoing_url}")
         resp = requests.get(ongoing_url, timeout=TIMEOUT_SECONDS)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
         rows = soup.select("table tr")
-        print(f"🔍 Ongoing events → found {len(rows)} table rows")
+        #print(f"🔍 Ongoing events → found {len(rows)} table rows")
 
         for row in rows:
             cols = [c.get_text(strip=True) for c in row.find_all("td")]
@@ -572,7 +572,7 @@ def search_events():
                 continue
 
             event_url = f"https://myrcm.ch/myrcm/main?dId[E]={event_id}"
-            print(f"  ⚡ Ongoing Event: {event_name} ({host}) → {event_url}")
+            #print(f"  ⚡ Ongoing Event: {event_name} ({host}) → {event_url}")
             events.append({"name": f"⚡ {event_name} ({host})", "url": event_url})
     
     except Timeout:
@@ -592,12 +592,12 @@ def search_events():
     # --- Archived events ---
     try:
         archived_url = f"https://myrcm.ch/myrcm/main?pLa=en&dFi={urllib.parse.quote(query)}&hId[1]=search"
-        print(f"🗄️ Fetching archived events: {archived_url}")
+        #print(f"🗄️ Fetching archived events: {archived_url}")
         resp = requests.get(archived_url, timeout=TIMEOUT_SECONDS)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
         rows = soup.select("table tr")
-        print(f"🔍 Archived events → found {len(rows)} table rows")
+        #print(f"🔍 Archived events → found {len(rows)} table rows")
 
         for row in rows:
             cols = [c.get_text(strip=True) for c in row.find_all("td")]
@@ -618,7 +618,7 @@ def search_events():
                 continue
 
             event_url = f"https://myrcm.ch/myrcm/main?dId[E]={event_id}"
-            print(f"  🗄️ Archived Event: {event_name} ({host}) → {event_url}")
+            #print(f"  🗄️ Archived Event: {event_name} ({host}) → {event_url}")
             events.append({"name": f"🗄️ {event_name} ({host})", "url": event_url})
 
     except Timeout:
@@ -645,7 +645,7 @@ def get_classes():
     user_ip, ua = get_client_info()
     
     try:
-        print(f"🔎 Fetching classes from: {event_url}")
+        #print(f"🔎 Fetching classes from: {event_url}")
         resp = requests.get(event_url, timeout=TIMEOUT_SECONDS)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -660,7 +660,7 @@ def get_classes():
             class_name = a.get_text(strip=True)
             class_url = f"https://myrcm.ch/myrcm/report/en/{event_id}/{section_id}"
 
-            print(f"  📌 Class: {class_name} → {class_url}")
+            #print(f"  📌 Class: {class_name} → {class_url}")
             classes.append({
                 "name": class_name,
                 "url": class_url
@@ -690,7 +690,7 @@ def get_finals():
     user_ip, ua = get_client_info()
 
     try:
-        print(f"🔎 Fetching finals from: {class_url}")
+        #print(f"🔎 Fetching finals from: {class_url}")
         resp = requests.get(class_url, timeout=TIMEOUT_SECONDS)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -706,10 +706,10 @@ def get_finals():
             if elem.name in ("h2", "h3", "h4", "div") and text:
                 if text.startswith("final"):
                     in_final_section = True
-                    print(f"✅ Entering FINAL section: '{text}'")
+                    #print(f"✅ Entering FINAL section: '{text}'")
                     continue
                 elif in_final_section:
-                    print(f"⛔ Leaving FINAL section at: '{text}'")
+                    #print(f"⛔ Leaving FINAL section at: '{text}'")
                     break
 
             if elem.name == "a" and in_final_section and elem.has_attr("onclick"):
@@ -725,9 +725,10 @@ def get_finals():
                             "name": pretty_name,
                             "onclick": m.group(1),
                         })
-                        print(f"   ✅ Accepted final: {pretty_name}")
+                        #print(f"   ✅ Accepted final: {pretty_name}")
                     else:
-                        print(f"   ❌ Rejected (non-final): {raw_name}")
+                        #print(f"   ❌ Rejected (non-final): {raw_name}")
+                        pass
 
         print(f"📊 Extracted {len(finals)} finals")
         return jsonify(finals)
@@ -753,11 +754,11 @@ def log_usage():
         class_name = request.form.get("class_name", "").strip()
         final_name = request.form.get("final_name", "").strip()
 
-        # ISO timestamp (easy for Excel too)
-        timestamp = datetime.utcnow().isoformat()
+        # ISO timestamp with timezone-aware UTC
+        timestamp = datetime.now(timezone.utc).isoformat()
 
-        # 🔹 Use helper instead of empty header
-        country = get_country_from_ip(user_ip) or "Unknown"
+        # Resolve country immediately
+        country = get_country_from_ip(user_ip)
 
         log_line = csv_escape(
             timestamp, user_ip, country,
@@ -765,6 +766,7 @@ def log_usage():
         )
 
         usage_logger.info(log_line)
+
 
 
 @app.route("/", methods=["GET", "POST"])

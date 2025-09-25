@@ -100,8 +100,10 @@ def scrape_race_data(start_url, query_str):
 
         all_tables = report_soup.find_all("table")
         if not all_tables:
-            print("Could not find any results tables on the report page.", file=sys.stderr)
-            return
+            print("❌ No results tables found on the report page.", file=sys.stderr)
+            print("ℹ️ This usually means the final hasn’t been run yet or results are not published.", file=sys.stderr)
+            sys.exit(2)  # distinct code for 'no results'
+
 
         # 5. Save the data to a CSV file
         title_tag = soup.find("title")
