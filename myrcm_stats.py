@@ -40,6 +40,22 @@ STANDARD_FUEL_STINT = 245            # the most common length of a fuel stint
 
 
 # ---------------- Utilities ----------------
+def parse_duration_to_seconds(duration_str: str) -> int | None:
+    """Convert 'MM:SS' or 'HH:MM:SS' into total seconds."""
+    try:
+        parts = duration_str.strip().split(":")
+        if len(parts) == 2:  # MM:SS
+            m, s = map(int, parts)
+            return m * 60 + s
+        elif len(parts) == 3:  # HH:MM:SS
+            h, m, s = map(int, parts)
+            return h * 3600 + m * 60 + s
+        else:
+            return None
+    except Exception:
+        return None
+
+
 def parse_lap_entry(entry):
     """Parse lap cell like '(2) 14.805' or '1:15.523' or '15.523' -> seconds as float or np.nan."""
     if pd.isna(entry):
@@ -180,14 +196,15 @@ try:
     for i, row in enumerate(all_lines):
         for cell in row:
             if isinstance(cell, str) and "Race time:" in cell:
-                # take next token after 'Race time:'
                 try:
+                    # take the token after 'Race time:'
                     part = cell.split("Race time:")[-1].strip().split()[0]
-                    if ':' in part:
-                        mm, ss = part.split(':')
-                        race_duration_sec = int(mm) * 60 + int(ss)
-                except Exception:
-                    pass
+                    race_duration_sec = parse_duration_to_seconds(part)
+                    if race_duration_sec is None:
+                        print(f"⚠️ Could not parse race duration from: '{part}'", file=sys.stderr)
+                except Exception as e:
+                    print(f"⚠️ Failed parsing race duration: {e}", file=sys.stderr)
+
         if row and isinstance(row[0], str) and row[0].strip().lower().startswith("laptimes"):
             lap_start_line = i + 1
             break
