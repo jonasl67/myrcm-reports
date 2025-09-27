@@ -15,6 +15,8 @@ import urllib.parse
 import csv
 import io
 from datetime import datetime, timezone
+import socket
+from requests.exceptions import Timeout, RequestException, SSLError, ConnectionError
 
 TIMEOUT_SECONDS = 5  # timeout for myrcm.ch responses
 
@@ -186,8 +188,12 @@ HTML_FORM = """
     const errorBox    = document.getElementById("error") || { innerText: "" };
 
     function showError(msg) {
-      console.error(msg);
-      if (errorBox) errorBox.innerText = msg;
+        console.error(msg);
+        if (errorBox) errorBox.innerText = msg;
+    }
+
+    function clearError() {
+        if (errorBox) errorBox.innerText = "";
     }
 
     function resetDropdowns() {
@@ -263,6 +269,7 @@ HTML_FORM = """
     eventSearch.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !searchBtn.disabled) {
         e.preventDefault();
+        clearError();   // <-- clear error before new search
         fetchEvents(eventSearch.value.trim());
       }
     });
@@ -270,6 +277,7 @@ HTML_FORM = """
     // Trigger search on button click
     searchBtn.addEventListener("click", () => {
       if (!searchBtn.disabled) {
+        clearError();   // <-- clear error before starting a new search
         fetchEvents(eventSearch.value.trim());
       }
     });
@@ -489,6 +497,36 @@ if is_new_file:
     with open(log_path, "a") as f:
         f.write("timestamp,user_ip,country,url,event,class,final\n")
 
+# ---------------------
+
+def safe_fetch(url, timeout=TIMEOUT_SECONDS):
+    """
+    Wrapper for requests.get() with better diagnostics.
+    Returns (response, error_msg).
+    """
+    try:
+        resp = requests.get(url, timeout=timeout)
+        resp.raise_for_status()
+        return resp, None
+
+    except Timeout:
+        return None, f"⏰ Timeout: no response from {url}"
+
+    except SSLError as e:
+        return None, f"🔒 SSL error contacting {url}: {e}"
+
+    except ConnectionError as e:
+        # Distinguish DNS errors
+        if isinstance(e.__cause__, socket.gaierror):
+            return None, f"🌐 DNS lookup failed for {url} (hostname not resolved)"
+        return None, f"🚫 Connection blocked or reset when contacting {url}: {e}"
+
+    except RequestException as e:
+        return None, f"❌ Request failed for {url}: {e}"
+
+    except Exception as e:
+        return None, f"⚠️ Unexpected error contacting {url}: {e}"
+
 def csv_escape(*fields):
     """Return a CSV-safe line with all fields quoted."""
     buf = io.StringIO()
@@ -544,94 +582,66 @@ def search_events():
     events = []
 
     # --- Ongoing events ---
-    try:
-        ongoing_url = f"https://myrcm.ch/myrcm/main?hId[1]=evt&pLa=en&dFi={urllib.parse.quote(query)}&hId[1]=search"
-        #print(f"🔎 Fetching ongoing events: {ongoing_url}")
-        resp = requests.get(ongoing_url, timeout=TIMEOUT_SECONDS)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-        rows = soup.select("table tr")
-        #print(f"🔍 Ongoing events → found {len(rows)} table rows")
+    ongoing_url = f"https://myrcm.ch/myrcm/main?hId[1]=evt&pLa=en&dFi={urllib.parse.quote(query)}&hId[1]=search"
+    resp, err = safe_fetch(ongoing_url)
+    if err:
+        print(err)
+        usage_logger.info(f"UserIP={user_ip} {err}")
+        return jsonify({"error": f"Network problem: {err}"}), 502
 
-        for row in rows:
-            cols = [c.get_text(strip=True) for c in row.find_all("td")]
-            links = row.find_all("a", href=True)
-            if not cols or not links:
-                continue
+    soup = BeautifulSoup(resp.text, "html.parser")
+    rows = soup.select("table tr")
+    for row in rows:
+        cols = [c.get_text(strip=True) for c in row.find_all("td")]
+        links = row.find_all("a", href=True)
+        if not cols or not links:
+            continue
 
-            event_name = cols[2] if len(cols) > 2 else "Unknown Event"
-            host = cols[1] if len(cols) > 1 else "Unknown Host"
+        event_name = cols[2] if len(cols) > 2 else "Unknown Event"
+        host = cols[1] if len(cols) > 1 else "Unknown Host"
 
-            event_id = None
-            for a in links:
-                m = re.search(r"dId\[E\]=(\d+)", a["href"])
-                if m:
-                    event_id = m.group(1)
-                    break
-            if not event_id:
-                continue
+        event_id = None
+        for a in links:
+            m = re.search(r"dId\[E\]=(\d+)", a["href"])
+            if m:
+                event_id = m.group(1)
+                break
+        if not event_id:
+            continue
 
-            event_url = f"https://myrcm.ch/myrcm/main?dId[E]={event_id}"
-            #print(f"  ⚡ Ongoing Event: {event_name} ({host}) → {event_url}")
-            events.append({"name": f"⚡ {event_name} ({host})", "url": event_url})
-    
-    except Timeout:
-        msg = f"Timeout contacting myrcm.ch (query='{query}')"
-        print(f"⏰ {msg}")
-        #usage_logger.info(f"UserIP={user_ip} Agent={ua} {msg}")
-        usage_logger.info(f"UserIP={user_ip} {msg}")
-        return jsonify({"error": "Getting no response from myrcm.ch, please try again in a while"}), 504
-    
-    except RequestException as e:
-        msg = f"Request error contacting myrcm.ch (query='{query}'): {e}"
-        print(f"❌ {msg}")
-        #usage_logger.info(f"UserIP={user_ip} Agent={ua} {msg}")
-        usage_logger.info(f"UserIP={user_ip} {msg}")
-        return jsonify({"error": f"Error contacting myrcm.ch: {e}"}), 502
+        event_url = f"https://myrcm.ch/myrcm/main?dId[E]={event_id}"
+        events.append({"name": f"⚡ {event_name} ({host})", "url": event_url})
 
     # --- Archived events ---
-    try:
-        archived_url = f"https://myrcm.ch/myrcm/main?pLa=en&dFi={urllib.parse.quote(query)}&hId[1]=search"
-        #print(f"🗄️ Fetching archived events: {archived_url}")
-        resp = requests.get(archived_url, timeout=TIMEOUT_SECONDS)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-        rows = soup.select("table tr")
-        #print(f"🔍 Archived events → found {len(rows)} table rows")
+    archived_url = f"https://myrcm.ch/myrcm/main?pLa=en&dFi={urllib.parse.quote(query)}&hId[1]=search"
+    resp, err = safe_fetch(archived_url)
+    if err:
+        print(err)
+        usage_logger.info(f"UserIP={user_ip} {err}")
+        return jsonify({"error": f"Network problem: {err}"}), 502
 
-        for row in rows:
-            cols = [c.get_text(strip=True) for c in row.find_all("td")]
-            links = row.find_all("a", href=True)
-            if not cols or not links:
-                continue
+    soup = BeautifulSoup(resp.text, "html.parser")
+    rows = soup.select("table tr")
+    for row in rows:
+        cols = [c.get_text(strip=True) for c in row.find_all("td")]
+        links = row.find_all("a", href=True)
+        if not cols or not links:
+            continue
 
-            event_name = cols[2] if len(cols) > 2 else "Unknown Event"
-            host = cols[1] if len(cols) > 1 else "Unknown Host"
+        event_name = cols[2] if len(cols) > 2 else "Unknown Event"
+        host = cols[1] if len(cols) > 1 else "Unknown Host"
 
-            event_id = None
-            for a in links:
-                m = re.search(r"dId\[E\]=(\d+)", a["href"])
-                if m:
-                    event_id = m.group(1)
-                    break
-            if not event_id:
-                continue
+        event_id = None
+        for a in links:
+            m = re.search(r"dId\[E\]=(\d+)", a["href"])
+            if m:
+                event_id = m.group(1)
+                break
+        if not event_id:
+            continue
 
-            event_url = f"https://myrcm.ch/myrcm/main?dId[E]={event_id}"
-            #print(f"  🗄️ Archived Event: {event_name} ({host}) → {event_url}")
-            events.append({"name": f"🗄️ {event_name} ({host})", "url": event_url})
-
-    except Timeout:
-        msg = f"Timeout contacting myrcm.ch (query='{query}')"
-        print(f"⏰ {msg}")
-        usage_logger.info(f"UserIP={user_ip} {msg}")
-        return jsonify({"error": "Getting no response from myrcm.ch, please try again in a while"}), 504
-    
-    except RequestException as e:
-        msg = f"Request error contacting myrcm.ch (query='{query}'): {e}"
-        print(f"❌ {msg}")
-        usage_logger.info(f"UserIP={user_ip} {msg}")
-        return jsonify({"error": f"Error contacting myrcm.ch: {e}"}), 502
+        event_url = f"https://myrcm.ch/myrcm/main?dId[E]={event_id}"
+        events.append({"name": f"🗄️ {event_name} ({host})", "url": event_url})
 
     print(f"📊 Extracted {len(events)} total events")
     return jsonify(events)
@@ -643,43 +653,27 @@ def get_classes():
         return jsonify([])
 
     user_ip, ua = get_client_info()
-    
-    try:
-        #print(f"🔎 Fetching classes from: {event_url}")
-        resp = requests.get(event_url, timeout=TIMEOUT_SECONDS)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
 
-        classes = []
-        for a in soup.select("a[onclick*='openNewWindows']"):
-            onclick_attr = a.get("onclick", "")
-            match = re.search(r"openNewWindows\((\d+),\s*(\d+)\)", onclick_attr)
-            if not match:
-                continue
-            event_id, section_id = match.groups()
-            class_name = a.get_text(strip=True)
-            class_url = f"https://myrcm.ch/myrcm/report/en/{event_id}/{section_id}"
+    resp, err = safe_fetch(event_url)
+    if err:
+        print(err)
+        usage_logger.info(f"UserIP={user_ip} {err}")
+        return jsonify({"error": f"Network problem: {err}"}), 502
 
-            #print(f"  📌 Class: {class_name} → {class_url}")
-            classes.append({
-                "name": class_name,
-                "url": class_url
-            })
+    soup = BeautifulSoup(resp.text, "html.parser")
+    classes = []
+    for a in soup.select("a[onclick*='openNewWindows']"):
+        onclick_attr = a.get("onclick", "")
+        match = re.search(r"openNewWindows\((\d+),\s*(\d+)\)", onclick_attr)
+        if not match:
+            continue
+        event_id, section_id = match.groups()
+        class_name = a.get_text(strip=True)
+        class_url = f"https://myrcm.ch/myrcm/report/en/{event_id}/{section_id}"
+        classes.append({"name": class_name, "url": class_url})
 
-        print(f"📊 Extracted {len(classes)} classes")
-        return jsonify(classes)
-    
-    except Timeout:
-        msg = f"Timeout fetching classes (url={event_url})"
-        print(f"⏰ {msg}")
-        usage_logger.info(f"UserIP={user_ip} {msg}")
-        return jsonify({"error": "Getting no response from myrcm.ch, please try again in a while"}), 504
-    
-    except RequestException as e:
-        msg = f"Request error fetching classes (url={event_url}): {e}"
-        print(f"❌ {msg}")
-        usage_logger.info(f"UserIP={user_ip} {msg}")
-        return jsonify({"error": f"Error contacting myrcm.ch: {e}"}), 502
+    print(f"📊 Extracted {len(classes)} classes")
+    return jsonify(classes)
 
 @app.route("/get_finals")
 def get_finals():
@@ -689,61 +683,38 @@ def get_finals():
 
     user_ip, ua = get_client_info()
 
-    try:
-        #print(f"🔎 Fetching finals from: {class_url}")
-        resp = requests.get(class_url, timeout=TIMEOUT_SECONDS)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
+    resp, err = safe_fetch(class_url)
+    if err:
+        print(err)
+        usage_logger.info(f"UserIP={user_ip} {err}")
+        return jsonify({"error": f"Network problem: {err}"}), 502
 
-        finals = []
-        in_final_section = False
+    soup = BeautifulSoup(resp.text, "html.parser")
+    finals = []
+    in_final_section = False
 
-        content_div = soup.select_one("div.l-content") or soup
+    content_div = soup.select_one("div.l-content") or soup
+    for elem in content_div.find_all(["h2", "h3", "h4", "div", "a"]):
+        text = elem.get_text(strip=True).lower()
 
-        for elem in content_div.find_all(["h2", "h3", "h4", "div", "a"]):
-            text = elem.get_text(strip=True).lower()
+        if elem.name in ("h2", "h3", "h4", "div") and text:
+            if text.startswith("final"):
+                in_final_section = True
+                continue
+            elif in_final_section:
+                break
 
-            if elem.name in ("h2", "h3", "h4", "div") and text:
-                if text.startswith("final"):
-                    in_final_section = True
-                    #print(f"✅ Entering FINAL section: '{text}'")
-                    continue
-                elif in_final_section:
-                    #print(f"⛔ Leaving FINAL section at: '{text}'")
-                    break
+        if elem.name == "a" and in_final_section and elem.has_attr("onclick"):
+            m = re.search(r"doAjaxCall\('([^']*)',\s*'([^']*)'\)", elem["onclick"])
+            if m:
+                raw_name = m.group(2).strip()
+                pretty_name = re.sub(r"^Final\s*::\s*", "", raw_name, flags=re.IGNORECASE)
 
-            if elem.name == "a" and in_final_section and elem.has_attr("onclick"):
-                m = re.search(r"doAjaxCall\('([^']*)',\s*'([^']*)'\)", elem["onclick"])
-                if m:
-                    raw_name = m.group(2).strip()
+                if not any(x in raw_name.lower() for x in ["practice", "qualif", "ranking", "timeschedule", "participants"]):
+                    finals.append({"name": pretty_name, "onclick": m.group(1)})
 
-                    # Strip "Final :: " if present
-                    pretty_name = re.sub(r"^Final\s*::\s*", "", raw_name, flags=re.IGNORECASE)
-
-                    if not any(x in raw_name.lower() for x in ["practice", "qualif", "ranking", "timeschedule", "participants"]):
-                        finals.append({
-                            "name": pretty_name,
-                            "onclick": m.group(1),
-                        })
-                        #print(f"   ✅ Accepted final: {pretty_name}")
-                    else:
-                        #print(f"   ❌ Rejected (non-final): {raw_name}")
-                        pass
-
-        print(f"📊 Extracted {len(finals)} finals")
-        return jsonify(finals)
-
-    except Timeout:
-        msg = f"Timeout fetching finals (url={class_url})"
-        print(f"⏰ {msg}")
-        usage_logger.info(f"UserIP={user_ip}{msg}")
-        return jsonify({"error": "Getting no response from myrcm.ch, please try again in a while"}), 504
-    
-    except RequestException as e:
-        msg = f"Request error fetching finals (url={class_url}): {e}"
-        print(f"❌ {msg}")
-        usage_logger.info(f"UserIP={user_ip} {msg}")
-        return jsonify({"error": f"Error contacting myrcm.ch: {e}"}), 502
+    print(f"📊 Extracted {len(finals)} finals")
+    return jsonify(finals)
 
 @app.before_request
 def log_usage():
@@ -766,8 +737,6 @@ def log_usage():
         )
 
         usage_logger.info(log_line)
-
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
