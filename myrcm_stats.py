@@ -36,9 +36,23 @@ from reportlab.lib.colors import black, red, green, blue, orange, violet, pink, 
 EVENT_THRESHOLD = 3.0            # minor incident threshold (sec)
 FUEL_MIN_LOSS = 4.5                 # minimum seconds lost to call it a fuel lap
 MAJOR_EVENT_THRESHOLD = 15.0     # major incident threshold (sec) => auto refuel
+
+# Even though FUEL_WINDOW has an upper bound (360s),
+# the classification logic is intentionally more lenient:
+#   - Stops later than 6:00 can still be marked as fuel if their lap-time delta
+#     matches a "typical" fuel stop (based on previous stops).
+#   - A late stop after a "MAJOR EVENT + FUEL" is still considered a fuel stop
+#     even if outside the nominal window.
+#   - The final stop of a race can be accepted earlier than 3:50 if it plausibly
+#     carries the car to the finish without another stop.
+#
+# This design allows both short on-road nitro stints (~4–5 min) and longer buggy stints (~7–8 min)
+# to be classified correctly, without tuning two separate parameter sets.
+# So FUEL_WINDOW acts more like a *guideline* than a hard filter.
 FUEL_WINDOW = (230, 360)            # 3:50 - 6:00 minutes
 STANDARD_FUEL_STINT = 245            # the most common length of a fuel stint
 
+# used to indicate that no fueling laps shall be classified, for electric races
 NOFUEL_MODE = False
 
 # ---------------- Utilities ----------------
@@ -423,6 +437,15 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
 
         else:
             # re-fueling mode
+            # --- Fuel stop classification ---
+            # Normally: require ≥ min fuel window (3:50) and ≥4.5s lost
+            # But the following exceptions broaden detection:
+            #   * After a MAJOR EVENT + FUEL, the next long stop can be tagged as fueling even if >6:00
+            #   * A last early splash (within 2–3 min of finish) can count if it looks like a typical fuel stop
+            #   * Any stop beyond 6:00 with a fuel-like delta is accepted
+            # This flexible approach explains why valid 7–8 min buggy fuel stops
+            # are still recognized despite FUEL_WINDOW = (230, 360).
+
             # Determine average fuel lap time lost for re-classification logic
             avg_normal_fuel_lap_lost_time = np.median(normal_fuel_stop_deltas) if normal_fuel_stop_deltas else 0.0
             time_since_fuel = current_time - last_fuel_time

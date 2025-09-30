@@ -32,7 +32,7 @@ HTML_FORM = """
 <html>
 <head>
   <title>RC Race Report Generator</title>
-  <style>
+<style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -103,7 +103,7 @@ HTML_FORM = """
     .disclaimer {
         color: red;
         font-weight: bold;
-        margin-bottom: 8px;
+        margin-bottom: 24px;
     }
     .note {
         color: #666; /* grey text */
@@ -127,7 +127,20 @@ HTML_FORM = """
     .search-row input {
       flex: 1;
     }
-  </style>
+
+    /* alignment + equal height fix for search input + button */
+    .search-row input[type="text"] {
+    margin: 0;
+    height: 40px;       /* fixed height for input */
+    box-sizing: border-box;
+    }
+    .search-row button {
+    margin: 0;
+    height: 40px;       /* same height as input */
+    box-sizing: border-box;
+}
+</style>
+
 </head>
 <body>
 
@@ -135,19 +148,16 @@ HTML_FORM = """
     <img src="{{ url_for('static', filename='logo_small.png') }}" alt="Balthazar RC Logo">
   </div>
 
-  <div class="title">Welcome to Balthazar RC's nitro onroad race reports page</div>
+  <div class="title">Welcome to Balthazar RC's race reports page</div>
 
   <div class="form-box">
-    <h2>Race Report – lapchart and statistics</h2>
+    <h2>myrcm.ch lapchart and statistics generator</h2>
 
     <p class="disclaimer">
         This is a free service that comes with no warranties!
     </p>
-    <p class="note">
-        Only onroad nitro 1/8 and 1/10 races are supported at this time, using the service for any other class will render incorrect data.
-    </p>
-
-    <label>1. Apply your events search filter:</label>
+    
+    <label>1. Apply your search filter for races published on myrcm.ch:</label>
     <div class="search-row">
       <input type="text" id="eventSearch" placeholder="Type at least 3 characters and press Enter or Search">
       <button type="button" id="searchBtn" disabled>Search</button>
@@ -436,7 +446,9 @@ HTML_FORM = """
 })();
 </script>
   
-
+  <div style="margin-top: 40px; text-align: center; font-size: 0.9em; color: #555;">
+    You can reach me at <a href="mailto:info@balthazarrc.com">info@balthazarrc.com</a>
+  </div>
 </body>
 </html>
 """
@@ -474,8 +486,6 @@ HTML_SUCCESS = """
 </body>
 </html>
 """
-
-NOFUEL_MODE = False
 
 log_path = pathlib.Path("usage.csv")
 is_new_file = not log_path.exists()
