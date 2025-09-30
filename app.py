@@ -475,6 +475,8 @@ HTML_SUCCESS = """
 </html>
 """
 
+NOFUEL_MODE = False
+
 log_path = pathlib.Path("usage.csv")
 is_new_file = not log_path.exists()
 

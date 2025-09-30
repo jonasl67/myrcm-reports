@@ -17,6 +17,7 @@ import math
 import pandas as pd
 import numpy as np
 import pathlib
+import argparse
 
 # ReportLab imports
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Frame, PageTemplate
@@ -38,6 +39,7 @@ MAJOR_EVENT_THRESHOLD = 15.0     # major incident threshold (sec) => auto refuel
 FUEL_WINDOW = (230, 360)            # 3:50 - 6:00 minutes
 STANDARD_FUEL_STINT = 245            # the most common length of a fuel stint
 
+NOFUEL_MODE = False
 
 # ---------------- Utilities ----------------
 def parse_duration_to_seconds(duration_str: str) -> int | None:
@@ -165,15 +167,22 @@ def format_time_ss_decimal(seconds):
     return f"{seconds:.2f}"
 
 
-# ---------------- CLI ----------------
-if len(sys.argv) < 2:
-    print("Usage: python myrcm_stats.py <csv_file> [--verbose]")
-    sys.exit(1)
+# ---------------- CLI / main() ----------------
+parser = argparse.ArgumentParser(
+    description="Generate RC race stats PDF from myrcm CSV"
+)
+parser.add_argument("csv_file", help="Input race CSV file")
+parser.add_argument("pdf_file", nargs="?", help="Output PDF file (optional)")
+parser.add_argument("--verbose", action="store_true", help="Enable verbose logging to stdout")
+parser.add_argument("--nofuel", action="store_true", help="Disable fuel stop classification (for electric classes)")
 
-csv_file = sys.argv[1]
-verbose = ("--verbose" in sys.argv[2:])
+args = parser.parse_args()
 
-# ---------------- Read file & metadata ----------------
+csv_file = args.csv_file
+verbose = args.verbose
+NOFUEL_MODE = args.nofuel
+
+# ---------------- Read file & race info lines ----------------
 lap_start_line = None
 raw_driver_info = []  # tuples (full_name, car_number) in summary order (finishing order)
 race_duration_sec = None
@@ -208,6 +217,17 @@ try:
         if row and isinstance(row[0], str) and row[0].strip().lower().startswith("laptimes"):
             lap_start_line = i + 1
             break
+
+    # --- Auto-detect NOFUEL mode if not explicitly set 
+    if not NOFUEL_MODE:
+        lowered_event = race_event.lower()
+        if "electric" in lowered_event or "1:12" in lowered_event:
+            NOFUEL_MODE = True
+            print("⚡ Auto-detected a no-refuel race → disabling fuel stop classification", file=sys.stderr)
+        elif race_duration_sec is not None and race_duration_sec <= 300:
+            NOFUEL_MODE = True
+            print(f"⚡ Auto-detected short race ({race_duration_sec}s ≤ 300s) → disabling fuel stop classification", file=sys.stderr)
+
 
     # collect summary block rows: look for rows where col[1] numeric and col[3] name exists
     for row in all_lines:
@@ -382,7 +402,7 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
     last_tire_time = 0.0
     driver_events = []
     
-    # use the parsed lap_times sequence for classification
+    # use the parsed lap_times sequence for classification if events ------------
     last_event = None
     for i, laptime in enumerate(lap_times):
         prev_time = current_time
@@ -390,68 +410,82 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
         delta = laptime - avg_clean_lap
         event = None
         
-        # Determine average fuel lap time lost for re-classification logic
-        avg_normal_fuel_lap_lost_time = np.median(normal_fuel_stop_deltas) if normal_fuel_stop_deltas else 0.0
-        time_since_fuel = current_time - last_fuel_time
-        avg_fuel_delta = avg_normal_fuel_lap_lost_time if avg_normal_fuel_lap_lost_time else 0.0
-
-        # first capture major events / lap time deltas, default is to assume the driver got fuel during such long delays
-        if delta >= MAJOR_EVENT_THRESHOLD:
-            race_time_left = race_duration_sec - current_time
-            time_to_next_fuel = STANDARD_FUEL_STINT - (current_time - last_fuel_time)
-
-            # Default assumption: fueling happened
-            event = "MAJOR EVENT + FUEL"
-            do_fuel = True
-
-            # Exception 1: Not enough race left to justify fueling
-            if race_time_left < time_to_next_fuel:
+        if NOFUEL_MODE: 
+            # Skip all fuel logic – just classify by thresholds
+            if delta >= MAJOR_EVENT_THRESHOLD:
                 event = "MAJOR EVENT"
-                do_fuel = False
+                major_incidents.append(i)
+                major_time_lost += max(0.0, delta)
+            elif delta >= EVENT_THRESHOLD:
+                event = "MINOR EVENT"
+                minor_incidents.append(i)
+                minor_time_lost += max(0.0, delta)
 
-            # Exception 2: Happens within first minute of race (start carnage)
-            elif current_time < 60:
-                event = "MAJOR EVENT"
-                do_fuel = False
+        else:
+            # re-fueling mode
+            # Determine average fuel lap time lost for re-classification logic
+            avg_normal_fuel_lap_lost_time = np.median(normal_fuel_stop_deltas) if normal_fuel_stop_deltas else 0.0
+            time_since_fuel = current_time - last_fuel_time
+            avg_fuel_delta = avg_normal_fuel_lap_lost_time if avg_normal_fuel_lap_lost_time else 0.0
 
-            major_incidents.append(i)
-            major_time_lost += max(0.0, delta)
-            if do_fuel:
+            # first capture major events / lap time deltas, default is to assume the driver got fuel during such long delays
+            if delta >= MAJOR_EVENT_THRESHOLD:
+                race_time_left = race_duration_sec - current_time
+                time_to_next_fuel = STANDARD_FUEL_STINT - (current_time - last_fuel_time)
+
+                # Default assumption: fueling happened
+                event = "MAJOR EVENT + FUEL"
+                do_fuel = True
+
+                # Exception 1: Not enough race left to justify fueling
+                if race_time_left < time_to_next_fuel:
+                    event = "MAJOR EVENT"
+                    do_fuel = False
+
+                # Exception 2: Happens within first minute of race (start carnage)
+                elif current_time < 60:
+                    event = "MAJOR EVENT"
+                    do_fuel = False
+
+                major_incidents.append(i)
+                major_time_lost += max(0.0, delta)
+                if do_fuel:
+                    fuel_stops_idx.append(i)
+
+            # capture fuel stops
+            elif (
+                # normal fuel stop, time since last stop is in fueling window and minimum time loss for fuel stop is exceeded/satisfied
+                (time_since_fuel >= FUEL_WINDOW[0] and delta >= FUEL_MIN_LOSS)
+                #(time_since_fuel >= FUEL_WINDOW[0] and time_since_fuel <= FUEL_WINDOW[1] and looks_like_fuel(delta)) # fails to catch long fuel stops
+
+                # Capture stops/events that happens after a MAJOR EVENT + FUEL as fuel stops even if they are outside/longer than the fueling windows.
+                # This happens because the car was fueled up leaving the long pit stop (time since last fuel is calculated from start of pit stop/event)
+                or (time_since_fuel > FUEL_WINDOW[1] and last_event == "MAJOR EVENT + FUEL" and avg_normal_fuel_lap_lost_time > 0 and looks_like_fuel(delta))
+
+                # This is to capture a last needed fuel stop of a race that may well happen before its strictly needed, but will still take the driver to the finish without another fuel stop
+                # # If this stop happens earlier than the minimum fuel window but still at least 2 minutes after the last stop,
+                # and the lap’s time loss looks like a normal fuel stop (≥5s but within 20% of the average fuel stop loss),
+                # then also count it as a fuel stop.
+                or (((race_duration_sec-current_time) < STANDARD_FUEL_STINT) and time_since_fuel < FUEL_WINDOW[0] and time_since_fuel > 120 and avg_normal_fuel_lap_lost_time > 0 and looks_like_fuel(delta))
+
+                # Catch laps that are beyond max fuel stint and looks like a typical fuel lap delta, 
+                or ((time_since_fuel > FUEL_WINDOW[1]) and (delta >= (FUEL_MIN_LOSS * 0.9)))
+            ):
+                #print(f"Last required fuel stop for {driver} - Race time left: {race_duration_sec-current_time} Average fuel stint:  \n") #debug
+
+                event = "FUEL STOP"
                 fuel_stops_idx.append(i)
+                fuel_time_lost += max(0.0, delta)
+                normal_fuel_stop_deltas.append(delta)
 
-        # capture fuel stops
-        elif (
-            # normal fuel stop, time since last stop is in fueling window and minimum time loss for fuel stop is exceeded/satisfied
-            (time_since_fuel >= FUEL_WINDOW[0] and delta >= FUEL_MIN_LOSS)
-            #(time_since_fuel >= FUEL_WINDOW[0] and time_since_fuel <= FUEL_WINDOW[1] and looks_like_fuel(delta)) # fails to catch long fuel stops
+            elif delta >= EVENT_THRESHOLD:
+                event = "MINOR EVENT"
+                minor_incidents.append(i)
+                minor_time_lost += max(0.0, delta)
 
-            # Capture stops/events that happens after a MAJOR EVENT + FUEL as fuel stops even if they are outside/longer than the fueling windows.
-            # This happens because the car was fueled up leaving the long pit stop (time since last fuel is calculated from start of pit stop/event)
-            or (time_since_fuel > FUEL_WINDOW[1] and last_event == "MAJOR EVENT + FUEL" and avg_normal_fuel_lap_lost_time > 0 and looks_like_fuel(delta))
-
-            # This is to capture a last needed fuel stop of a race that may well happen before its strictly needed, but will still take the driver to the finish without another fuel stop
-            # # If this stop happens earlier than the minimum fuel window but still at least 2 minutes after the last stop,
-            # and the lap’s time loss looks like a normal fuel stop (≥5s but within 20% of the average fuel stop loss),
-            # then also count it as a fuel stop.
-            or (((race_duration_sec-current_time) < STANDARD_FUEL_STINT) and time_since_fuel < FUEL_WINDOW[0] and time_since_fuel > 120 and avg_normal_fuel_lap_lost_time > 0 and looks_like_fuel(delta))
-
-            # Catch laps that are beyond max fuel stint and looks like a typical fuel lap delta, 
-            or ((time_since_fuel > FUEL_WINDOW[1]) and (delta >= (FUEL_MIN_LOSS * 0.9)))
-        ):
-            #print(f"Last required fuel stop for {driver} - Race time left: {race_duration_sec-current_time} Average fuel stint:  \n") #debug
-
-            event = "FUEL STOP"
-            fuel_stops_idx.append(i)
-            fuel_time_lost += max(0.0, delta)
-            normal_fuel_stop_deltas.append(delta)
-
-        elif delta >= EVENT_THRESHOLD:
-            event = "MINOR EVENT"
-            minor_incidents.append(i)
-            minor_time_lost += max(0.0, delta)
 
         if event:            
-            last_event = event # save lasr event since we may need it to classify an upcoming event
+            last_event = event # save last event since we may need it to classify an upcoming event
             before_pos = lap_positions[driver][i-1] if i > 0 else lap_positions[driver][0]
             after_pos = lap_positions[driver][i]
             
@@ -470,7 +504,7 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
                 last_fuel_stint_duration = current_time - last_fuel_time
                 log_line += f", last fuel={format_time_mm_ss(last_fuel_stint_duration)}"
 
-            # Changed this section to only show the position if it's unchanged, otherwise show the change
+            # show track position before/after the event (like a re-fuel lap)
             if before_pos == after_pos:
                 log_line += f", track position={before_pos}"
             else:
@@ -498,24 +532,28 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
                     if passed_drivers:
                         log_line += f" passed by: {', '.join(passed_drivers)}"
                     
-
             driver_events.append(log_line)
 
-    # calc average fuel stop time
-    #avg_fuel_stop_time = (fuel_time_lost / len(fuel_stops_idx)) if fuel_stops_idx else 0.0
-    avg_fuel_stop_time = (fuel_time_lost / len(normal_fuel_stop_deltas)) if normal_fuel_stop_deltas else 0.0
-    
-    # fuel intervals
-    fuel_times = []
-    accum = 0.0
-    for i, laptime in enumerate(lap_times):
-        accum += laptime
-        if i in fuel_stops_idx:
-            fuel_times.append(max(0.0, accum - laptime + avg_clean_lap/2.0))
+    # Build the summary ---------------------------------------
 
-    fuel_intervals = np.diff([0.0] + fuel_times) if fuel_times else np.array([])
-    avg_fuel_interval = float(np.mean(fuel_intervals)) if fuel_intervals.size else 0.0
+    if NOFUEL_MODE:
+        avg_fuel_interval = 0
+        avg_fuel_stop_time = 0
+        fuel_time_lost_str = 0
+    else:
+        # calc average fuel stop time
+        avg_fuel_stop_time = (fuel_time_lost / len(normal_fuel_stop_deltas)) if normal_fuel_stop_deltas else 0.0
+        
+        # fuel intervals
+        fuel_times = []
+        accum = 0.0
+        for i, laptime in enumerate(lap_times):
+            accum += laptime
+            if i in fuel_stops_idx:
+                fuel_times.append(max(0.0, accum - laptime + avg_clean_lap/2.0))
 
+        fuel_intervals = np.diff([0.0] + fuel_times) if fuel_times else np.array([])
+        avg_fuel_interval = float(np.mean(fuel_intervals)) if fuel_intervals.size else 0.0
 
     total_incident_time_lost = minor_time_lost + major_time_lost
     total_incident_laps = len(minor_incidents) + len(major_incidents)
@@ -613,6 +651,12 @@ note_text = (
     "calculating positions from lap times when track positions are not made avaialble."
 )
 
+if NOFUEL_MODE:
+    note_text += (
+        "<br/><br/><b>Note:</b> Fuel stop detection is <b>disabled</b> in this race report."
+        " All events are classified as minor or major incidents only."
+    )
+
 elements.append(Spacer(1, 16))
 elements.append(Paragraph(note_text, custom_note_style))
 elements.append(Spacer(1, 16))
@@ -681,7 +725,6 @@ else:
 
 elements.append(PageBreak())
 
-# ---------------- Drivers Track Positions chart ----------------
 # ---------------- Drivers Track Positions chart ----------------
 elements.append(Paragraph("Drivers Track Positions", styles["Heading1"]))
 elements.append(Spacer(1, 8))

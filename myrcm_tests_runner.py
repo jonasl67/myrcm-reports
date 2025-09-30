@@ -3,8 +3,7 @@
 test_myrcm.py
 
 Runs myrcm_runner.py against all test cases listed in myrcm_test_cases.txt.
-Reports success/failure for each case, along with the descriptive comment
-from the test file for easier manual checking of the generated PDFs.
+Supports optional expected return codes with syntax: ; expect=N
 """
 
 import subprocess
@@ -18,12 +17,9 @@ def run_test_case(parts):
     cmd = ["python", RUNNER_SCRIPT] + parts
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        success = result.returncode == 0
-        stdout = result.stdout.strip()
-        stderr = result.stderr.strip()
-        return success, stdout, stderr
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
     except Exception as e:
-        return False, "", f"Exception: {e}"
+        return -999, "", f"Exception: {e}"
 
 def main():
     results = []
@@ -39,18 +35,27 @@ def main():
                 last_comment = line.lstrip("#").strip()
                 continue
 
-            # Use shlex.split so quoted params work correctly
+            # Split off expected return code if present
+            expected_rc = 0
+            if "; expect=" in line:
+                line, rc_part = line.split("; expect=", 1)
+                try:
+                    expected_rc = int(rc_part.strip())
+                except ValueError:
+                    expected_rc = 0
             parts = shlex.split(line)
 
             description = last_comment if last_comment else "(no description)"
             print(f"\n=== Running: {description} ===")
-            print(f"Command args: {parts}")
+            print(f"Command args: {parts} (expect {expected_rc})")
 
-            ok, stdout, stderr = run_test_case(parts)
-            results.append((description, line, ok, stdout, stderr))
+            rc, stdout, stderr = run_test_case(parts)
+            ok = (rc == expected_rc)
 
-            status = "✅ SUCCESS" if ok else "❌ FAIL"
-            print(f"{status}")
+            results.append((description, line, expected_rc, rc, ok, stdout, stderr))
+
+            status = "✅ PASS" if ok else f"❌ FAIL (got {rc}, expected {expected_rc})"
+            print(status)
             if stdout:
                 print("stdout:", stdout)
             if stderr:
@@ -59,8 +64,8 @@ def main():
             last_comment = None
 
     print("\n\n=== SUMMARY ===")
-    for desc, cmd_line, ok, stdout, stderr in results:
-        status = "✅ SUCCESS" if ok else "❌ FAIL"
+    for desc, cmd_line, exp_rc, rc, ok, stdout, stderr in results:
+        status = "✅ PASS" if ok else f"❌ FAIL (got {rc}, expected {exp_rc})"
         print(f"{status} | {desc}")
         print(f"    Command: {cmd_line}")
         if not ok:

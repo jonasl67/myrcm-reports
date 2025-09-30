@@ -77,12 +77,11 @@ def scrape_race_data(start_url, query_str):
         found_report, best_match_name = best_match
 
         if score(query_str, best_match_name) == 0:
-            msg = f"ERROR: No report matched '{query_str}'."
-            print(msg, file=sys.stdout)   # send to stdout so runner can catch it
-            print("Available reports:", file=sys.stderr)
-            for _, name in report_candidates:
-                print("  -", name, file=sys.stderr)
-            return
+            #msg = f"ERROR: No result report found for '{query_str}'."
+            #print(msg, file=sys.stdout)   # send to stdout so runner can catch it
+            print("❌ No result report found for that final.", file=sys.stderr)
+            print("ℹ️ This usually means the final hasn’t been run yet or results are not published.", file=sys.stderr)
+            sys.exit(2)  # distinct code for 'no results'
 
 
         print(f"Found report: '{best_match_name}'", file=sys.stderr)

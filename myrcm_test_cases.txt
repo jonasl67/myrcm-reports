@@ -30,4 +30,19 @@ https://myrcm.ch/myrcm/report/en/87792/362093 Final A
 https://myrcm.ch/myrcm/report/en/90116/368865 Final A
 
 # Verify that everything works even if the user didn't start the provided URL with https://
-myrcm.ch/myrcm/report/en/90116/368866
+myrcm.ch/myrcm/report/en/90116/368866 Final A
+
+# Vanilla 10 drivers 1:8 45 minute final but run in --nofuel mode to verify robustness and summary of incident times
+https://myrcm.ch/myrcm/report/en/88811/365281# Final A
+
+# Verify that a 5 min race is auto detected and set to nofuel mode
+https://myrcm.ch/myrcm/report/en/88595/364647 Final A run 2
+
+# Verify graceful handling of a class that had no final results posted 
+https://myrcm.ch/myrcm/report/en/89707/367788 Final A ; expect=2
+
+# Verify that a 5 min race is auto classisifed to be a nofuel race
+https://myrcm.ch/myrcm/report/en/89707/367790# Final A run 2
+
+# Verify that a 1:12 race is classified as nofuel 
+https://myrcm.ch/myrcm/report/en/83771/350310 Final A run 1
