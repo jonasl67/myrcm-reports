@@ -447,7 +447,7 @@ HTML_FORM = """
 </script>
   
   <div style="margin-top: 40px; text-align: center; font-size: 0.9em; color: #555;">
-    You can reach me at <a href="mailto:info@balthazarrc.com">info@balthazarrc.com</a>
+    If you have any pressing questions, the occasional rant,<br>or perhaps just a word of reluctant gratitude... <br>please send them over to <a href="mailto:info@balthazarrc.com">info@balthazarrc.com</a>
   </div>
 </body>
 </html>
@@ -483,6 +483,28 @@ HTML_SUCCESS = """
       </pre>
     </details>
   </div>
+    
+    <!--
+    <div style="margin-top: 40px; text-align: center;">
+      <p style="margin-bottom: 6px; font-size: 0.9em; color: #444;">
+        💚 Enjoy this service? Help keeping the server turned on for the price of a coffee! In the remote event of surplus, we promise to give it all back to the RC community :-)
+      </p>
+      <a href="https://www.paypal.com/donate/?hosted_button_id=XXXXXXX" target="_blank">
+        <button type="button" style="
+          background-color:#4CAF50;
+          color:white;
+          border:none;
+          padding:6px 14px;
+          border-radius:4px;
+          cursor:pointer;
+          font-size:0.9em;
+        ">
+          Donate
+        </button>
+      </a>
+    </div>
+    -->
+
 </body>
 </html>
 """

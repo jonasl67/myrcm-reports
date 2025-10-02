@@ -235,7 +235,7 @@ try:
     # --- Auto-detect NOFUEL mode if not explicitly set 
     if not NOFUEL_MODE:
         lowered_event = race_event.lower()
-        if "electric" in lowered_event or "1:12" in lowered_event:
+        if "electric" in lowered_event or "1:12" in lowered_event or "FWD" in lowered_event:
             NOFUEL_MODE = True
             print("⚡ Auto-detected a no-refuel race → disabling fuel stop classification", file=sys.stderr)
         elif race_duration_sec is not None and race_duration_sec <= 300:
