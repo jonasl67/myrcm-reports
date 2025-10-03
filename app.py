@@ -142,6 +142,8 @@ HTML_FORM = """
 </style>
 
 </head>
+  <meta name="Select a RC car race timd and published on myrcm.ch and get a lapchart / graph and more race statistics for the race">
+
 <body>
 
   <div class="header">
@@ -458,6 +460,7 @@ HTML_SUCCESS = """
 <html>
 <head>
   <title>Report Ready</title>
+  <meta name="Download the lapchart for the selected final of the RC car race published and timed by myrcm.ch">
 </head>
 <body style="margin-left: 40px;">
 
@@ -864,6 +867,30 @@ def download_file(run_id, filename):
 
     return response
 
+@app.route("/sitemap.xml")
+def sitemap():
+    # For a small site, enumerate routes or generate from stored events.
+    # Example static sitemap with site root + some useful pages:
+    urls = [
+        url_for('index', _external=True),
+        url_for('search_events', _external=True),
+    ]
+    xml = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for u in urls:
+        xml.append("<url>")
+        xml.append(f"<loc>{u}</loc>")
+        xml.append("</url>")
+    xml.append("</urlset>")
+    return Response("\n".join(xml), mimetype='application/xml')
+
+@app.route("/robots.txt")
+def robots():
+    lines = [
+        "User-agent: *",
+        "Sitemap: " + url_for('sitemap', _external=True)
+    ]
+    return Response("\n".join(lines), mimetype="text/plain")
 
     
 if __name__ == "__main__":
