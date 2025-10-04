@@ -9,7 +9,6 @@ import uuid
 import time
 import shutil
 import os
-import logging
 import re
 import urllib.parse
 import csv
@@ -17,8 +16,16 @@ import io
 from datetime import datetime, timezone
 import socket
 from requests.exceptions import Timeout, RequestException, SSLError, ConnectionError
+import json
+import atexit
 
-TIMEOUT_SECONDS = 5  # timeout for myrcm.ch responses
+# Google sheet for logging imports
+from googleapiclient.discovery import build
+from google.oauth2.service_account import Credentials
+from concurrent.futures import ThreadPoolExecutor
+from google.oauth2 import service_account
+
+TIMEOUT_SECONDS = 7  # timeout for myrcm.ch responses
 
 app = Flask(__name__)
 
@@ -512,29 +519,81 @@ HTML_SUCCESS = """
 </html>
 """
 
-log_path = pathlib.Path("usage.csv")
-is_new_file = not log_path.exists()
+# ---------------- Google sheet log ----------------
 
-# Create a dedicated logger for usage
-usage_logger = logging.getLogger("usage")
-usage_logger.setLevel(logging.INFO)
+SPREADSHEET_ID = "1CTEi_f3mkCvNDXi7NxHHkpvbZ65mWzQ4Y54dZyuabjI"  # paste from Sheets URL
+creds_info = None
+executor = None
+sheet = None
 
-# Create a file handler for usage.csv in append mode
-fh = logging.FileHandler(log_path, mode="a")
-fh.setLevel(logging.INFO)
+# --- Init Google Sheets logging only if credentials are provided ---
+if os.environ.get("GOOGLE_CREDENTIALS"):
+    try:
+        creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+        creds = service_account.Credentials.from_service_account_info(
+            creds_info,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
+        service = build("sheets", "v4", credentials=creds)
+        sheet = service.spreadsheets()
+        executor = ThreadPoolExecutor(max_workers=2)
+        print("✅ Google Sheets logging enabled")
+    except Exception as e:
+        print(f"⚠️ Failed to init Google Sheets logging: {e}")
+else:
+    print("⚠️ GOOGLE_CREDENTIALS not set, Sheets logging disabled")
 
-# Only log the message itself (we'll build CSV lines manually)
-formatter = logging.Formatter("%(message)s")
-fh.setFormatter(formatter)
+# ---------------- Utilities ----------------
 
-usage_logger.addHandler(fh)
+def log_to_sheets(row):
+    try:
+        body = {"values": [row]}
+        sheet.values().append(
+            spreadsheetId=SPREADSHEET_ID,
+            range="A1",
+            valueInputOption="USER_ENTERED",
+            body=body
+        ).execute()
+    except Exception as e:
+        print(f"⚠️ Sheets logging failed: {e}", flush=True)
 
-# If file is new, write header
-if is_new_file:
-    with open(log_path, "a") as f:
-        f.write("timestamp,user_ip,country,url,event,class,final\n")
+def async_log_usage(user_ip, country, event_name, class_name, final_name):
+    """Queue a log entry to Google Sheets if logging is enabled."""
+    if not executor or not sheet:
+        return  # logging disabled, no-op
 
-# ---------------------
+    #ts = datetime.datetime.utcnow().isoformat()
+    ts = datetime.now(timezone.utc).isoformat()
+
+    row = [[ts, user_ip, country, event_name, class_name, final_name]]
+
+    def task():
+        try:
+            sheet.values().append(
+                spreadsheetId=SPREADSHEET_ID,
+                range="A1",
+                valueInputOption="USER_ENTERED",
+                body={"values": row}
+            ).execute()
+        except Exception as e:
+            print(f"⚠️ Sheets logging failed: {e}")
+
+    executor.submit(task)
+
+def parse_duration_to_seconds(duration_str: str) -> int | None:
+    """Convert 'MM:SS' or 'HH:MM:SS' into total seconds."""
+    try:
+        parts = duration_str.strip().split(":")
+        if len(parts) == 2:  # MM:SS
+            m, s = map(int, parts)
+            return m * 60 + s
+        elif len(parts) == 3:  # HH:MM:SS
+            h, m, s = map(int, parts)
+            return h * 3600 + m * 60 + s
+        else:
+            return None
+    except Exception:
+        return None
 
 def safe_fetch(url, timeout=TIMEOUT_SECONDS):
     """
@@ -623,7 +682,6 @@ def search_events():
     resp, err = safe_fetch(ongoing_url)
     if err:
         print(err)
-        usage_logger.info(f"UserIP={user_ip} {err}")
         return jsonify({"error": f"Network problem: {err}"}), 502
 
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -654,7 +712,6 @@ def search_events():
     resp, err = safe_fetch(archived_url)
     if err:
         print(err)
-        usage_logger.info(f"UserIP={user_ip} {err}")
         return jsonify({"error": f"Network problem: {err}"}), 502
 
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -689,12 +746,9 @@ def get_classes():
     if not event_url:
         return jsonify([])
 
-    user_ip, ua = get_client_info()
-
     resp, err = safe_fetch(event_url)
     if err:
         print(err)
-        usage_logger.info(f"UserIP={user_ip} {err}")
         return jsonify({"error": f"Network problem: {err}"}), 502
 
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -723,7 +777,6 @@ def get_finals():
     resp, err = safe_fetch(class_url)
     if err:
         print(err)
-        usage_logger.info(f"UserIP={user_ip} {err}")
         return jsonify({"error": f"Network problem: {err}"}), 502
 
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -757,7 +810,6 @@ def get_finals():
 def log_usage():
     if request.endpoint == "index" and request.method == "POST":
         user_ip, _ = get_client_info()
-        submitted_url = request.form.get("url", "").strip()
         event_name = request.form.get("event_name", "").strip()
         class_name = request.form.get("class_name", "").strip()
         final_name = request.form.get("final_name", "").strip()
@@ -768,12 +820,9 @@ def log_usage():
         # Resolve country immediately
         country = get_country_from_ip(user_ip)
 
-        log_line = csv_escape(
-            timestamp, user_ip, country,
-            submitted_url, event_name, class_name, final_name
-        )
-
-        usage_logger.info(log_line)
+        #usage_logger.info(log_line)
+        #async_log_usage(user_ip, event_name, class_name, final_name)
+        async_log_usage(user_ip, country, event_name, class_name, final_name)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -892,7 +941,17 @@ def robots():
     ]
     return Response("\n".join(lines), mimetype="text/plain")
 
-    
+@atexit.register
+def cleanup_executor():
+    global executor
+    if executor:
+        try:
+            executor.shutdown(wait=False, cancel_futures=True)
+            print("✅ ThreadPoolExecutor shut down")
+        except Exception as e:
+            print(f"⚠️ Failed shutting down executor: {e}")
+
+# -----------main entry -------------------------------------------    
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))  # 5050 for local dev
     app.run(host="0.0.0.0", port=port)

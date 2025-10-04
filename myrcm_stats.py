@@ -55,7 +55,9 @@ STANDARD_FUEL_STINT = 245            # the most common length of a fuel stint
 # used to indicate that no fueling laps shall be classified, for electric races
 NOFUEL_MODE = False
 
+
 # ---------------- Utilities ----------------
+
 def parse_duration_to_seconds(duration_str: str) -> int | None:
     """Convert 'MM:SS' or 'HH:MM:SS' into total seconds."""
     try:
@@ -70,7 +72,6 @@ def parse_duration_to_seconds(duration_str: str) -> int | None:
             return None
     except Exception:
         return None
-
 
 def parse_lap_entry(entry):
     """Parse lap cell like '(2) 14.805' or '1:15.523' or '15.523' -> seconds as float or np.nan."""
