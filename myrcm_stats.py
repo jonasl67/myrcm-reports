@@ -55,6 +55,10 @@ STANDARD_FUEL_STINT = 245            # the most common length of a fuel stint
 # used to indicate that no fueling laps shall be classified, for electric races
 NOFUEL_MODE = False
 
+# used in summary table for fun
+# Unicode superscript digits: ¹, ², ³
+TROPHIES = ["¹", "²", "³"]
+
 
 # ---------------- Utilities ----------------
 
@@ -507,6 +511,16 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
                 minor_incidents.append(i)
                 minor_time_lost += max(0.0, delta)
 
+        # --- calculate consistency % ---
+        consistency_pct = 0.0
+        if n_laps > 1:
+            # use only "clean" laps (filter out NaNs)
+            lap_times_clean = lap_times[~np.isnan(lap_times)]
+            if lap_times_clean.size > 1:
+                mean_lap = np.mean(lap_times_clean)
+                std_lap = np.std(lap_times_clean)
+                if mean_lap > 0:
+                    consistency_pct = max(0.0, (1.0 - (std_lap / mean_lap)) * 100.0)
 
         if event:            
             last_event = event # save last event since we may need it to classify an upcoming event
@@ -556,6 +570,7 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
                     if passed_drivers:
                         log_line += f" passed by: {', '.join(passed_drivers)}"
                     
+            
             driver_events.append(log_line)
 
     # Build the summary ---------------------------------------
@@ -583,6 +598,14 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
     total_incident_laps = len(minor_incidents) + len(major_incidents)
 
     display = f"{full_name} ({car_no})"
+
+    consistency = 0.0
+    if n_laps > 1:
+        mu = np.mean(lap_times)
+        sigma = np.std(lap_times)
+        if mu > 0:
+            consistency = max(0, min(100, 100 * (1 - sigma / mu)))
+
     results.append({
         "Pos": pos_idx,
         "Driver (Nr)": display,
@@ -594,7 +617,8 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
         "Avg Fuel Stop Time": format_time_ss_decimal(avg_fuel_stop_time),
         "No. of Events/Incidents": total_incident_laps,
         "Fuel Time Lost": format_time_mm_ss_decimal(fuel_time_lost),
-        "Events Time Lost": format_time_mm_ss_decimal(total_incident_time_lost)
+        "Events Time Lost": format_time_mm_ss_decimal(total_incident_time_lost),
+        "Consistency %": f"{consistency:.1f}"
     })
 
     if driver_events:
@@ -604,6 +628,35 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
 summary_df = pd.DataFrame(results)
 if not summary_df.empty:
     summary_df.sort_values(by=["Pos"], inplace=True)
+
+    # --- Ensure "90 percentile lap" is numeric for ranking ---
+    if "90 percentile lap" in summary_df.columns:
+        summary_df["90 percentile lap (num)"] = pd.to_numeric(
+            summary_df["90 percentile lap"], errors="coerce"
+        )
+
+        # --- Top 3 fastest 90 percentile laps (lower is better) ---
+        top3_fast = summary_df.nsmallest(3, "90 percentile lap (num)")
+
+        for i, (_, row) in enumerate(top3_fast.iterrows()):
+            summary_df.loc[
+                summary_df["Driver (Nr)"] == row["Driver (Nr)"],
+                "90 percentile lap"
+            ] = f"  {row['90 percentile lap']} {TROPHIES[i]}"
+
+    # --- Top 3 consistency (higher is better) ---
+    if "Consistency %" in summary_df.columns:
+        summary_df["Consistency (num)"] = pd.to_numeric(
+            summary_df["Consistency %"], errors="coerce"
+        )
+        top3_cons = summary_df.nlargest(3, "Consistency (num)")
+
+        for i, (_, row) in enumerate(top3_cons.iterrows()):
+            summary_df.loc[
+                summary_df["Driver (Nr)"] == row["Driver (Nr)"],
+                "Consistency %"
+            ] = f"  {row['Consistency %']} {TROPHIES[i]}"
+
 
 # ---------------- PDF Report ----------------
 #pdf_name = os.path.splitext(os.path.basename(csv_file))[0] + ".pdf"
@@ -699,15 +752,16 @@ if not summary_df.empty:
         Paragraph("Laps", center_bold),
         Paragraph("Race Time", center_bold),
         Paragraph("90 percentile lap", center_bold),
+        Paragraph("Consistency %", center_bold),
         Paragraph("Fuel Stops", center_bold),
-        Paragraph("Avg Fuel Interval", center_bold),
+        Paragraph("Avg Fuel<br/>Interval", center_bold),
         Paragraph("Avg Fuel Stop Time", center_bold),
         Paragraph("No. of Events/Incidents", center_bold),
         Paragraph("Fuel Time Lost", center_bold),
         Paragraph("Events Time Lost", center_bold),
     ]
     table_data = [header_row] + summary_df[[
-        "Pos", "Driver (Nr)", "Laps", "Race Time", "90 percentile lap",
+        "Pos", "Driver (Nr)", "Laps", "Race Time", "90 percentile lap", "Consistency %",
         "Fuel Stops", "Avg Fuel Interval", "Avg Fuel Stop Time",
         "No. of Events/Incidents", "Fuel Time Lost", "Events Time Lost"
     ]].values.tolist()
@@ -743,6 +797,13 @@ if not summary_df.empty:
         "Major events (e.g., flame outs, tire changes) that typically also include fueling are counted separately under 'Events Time Lost'.",
         note_style
     ))
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(
+        "Note: 'Consistency %' is calculated as 100 × (1 − σ/μ), where σ = standard deviation of lap times and μ = average lap time. "
+        "Higher values indicate more consistent driving.",
+        note_style
+    ))
+
 
 else:
     elements.append(Paragraph("No summary could be computed.", left_style))
