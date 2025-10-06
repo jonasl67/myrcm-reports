@@ -937,6 +937,7 @@ def sitemap():
 def robots():
     lines = [
         "User-agent: *",
+        "Allow: /",
         "Sitemap: " + url_for('sitemap', _external=True)
     ]
     return Response("\n".join(lines), mimetype="text/plain")
