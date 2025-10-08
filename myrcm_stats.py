@@ -185,6 +185,46 @@ def format_time_ss_decimal(seconds):
         return "00.00"
     return f"{seconds:.2f}"
 
+def award_trophies(df, column, higher_is_better=True, min_valid_value=0.0):
+    """
+    Add trophy symbols (¹, ², ³) to the top 3 entries in a given column.
+
+    Args:
+        df (pd.DataFrame): Summary DataFrame.
+        column (str): Column to rank and modify.
+        higher_is_better (bool): Whether larger values rank higher.
+        min_valid_value (float): Minimum numeric value to consider valid.
+
+    The column may contain string values like "93.4%" — those are handled automatically.
+    """
+    if column not in df.columns:
+        return df  # nothing to do
+
+    # Create a numeric helper column (strip '%' if present)
+    numeric_col = f"{column} (num)"
+    df[numeric_col] = (
+        df[column]
+        .astype(str)
+        .str.replace("%", "", regex=False)
+        .astype(float)
+    )
+
+    valid = df[df[numeric_col].notna() & (df[numeric_col] > min_valid_value)]
+    if valid.empty:
+        return df
+
+    # Pick direction (best = highest or lowest)
+    ranked = (
+        valid.nlargest(3, numeric_col)
+        if higher_is_better
+        else valid.nsmallest(3, numeric_col)
+    )
+
+    for i, (idx, row) in enumerate(ranked.iterrows()):
+        df.at[idx, column] = f"  {row[column]} {TROPHIES[i]}"
+
+    return df
+
 
 # ---------------- CLI / main() ----------------
 parser = argparse.ArgumentParser(
@@ -315,6 +355,21 @@ for col_idx, driver in enumerate(header_names, start=1):
         "no_of_laps": official_laps
     }
 
+
+# --- Find global hot lap (ignore first laps) --------------------------------
+all_valid_laps = []
+for ddata in driver_lap_data.values():
+    laps = ddata["lap_times"]
+    if len(laps) > 1:
+        all_valid_laps.extend(laps[1:])  # skip first lap
+if all_valid_laps:
+    global_hot_lap = min(all_valid_laps)
+else:
+    global_hot_lap = None
+
+print(f"🔥 Global hot lap = {global_hot_lap:.3f}s")  # optional debug
+
+
 # ---------------- Determine orders ----------------
 # finishing order: prefer the summary/top block order (header order). Keep only drivers present.
 # Filter out 'Unnamed:' drivers before determining order
@@ -382,7 +437,7 @@ for driver in starting_order:  # use starting_order so left labels align with ch
     lap_positions[driver] = series
 
 
-# ---------------- Per-driver analysis (iterate finishing order so Pos aligns with summary) ----------------
+# ---------------- Per-driver analysis (iterate in finishing order so Pos aligns with summary) ----------------
 results = []
 verbose_log = {}
 
@@ -573,7 +628,7 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
             
             driver_events.append(log_line)
 
-    # Build the summary ---------------------------------------
+    # Build the summary for this driver ---------------------------------------
 
     if NOFUEL_MODE:
         avg_fuel_interval = 0
@@ -599,6 +654,7 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
 
     display = f"{full_name} ({car_no})"
 
+    # -- consistency for this driver
     consistency = 0.0
     if n_laps > 1:
         mu = np.mean(lap_times)
@@ -606,68 +662,64 @@ for pos_idx, driver in enumerate(finishing_order, start=1):
         if mu > 0:
             consistency = max(0, min(100, 100 * (1 - sigma / mu)))
 
+    # -- Best lap for this driver (ignore first lap) ---
+    best_lap = 0.0
+    if n_laps > 1:
+        valid_laps = lap_times[1:]  # skip first lap
+        best_lap = float(np.min(valid_laps)) if valid_laps.size else 0.0
+    else:
+        best_lap = float(np.min(lap_times)) if lap_times.size else 0.0
+
+    # -- Calculate laps within 3% of global hot lap for this driver ---
+    hot_lap_global = np.nanmin([t for d in driver_lap_data.values() for t in d["lap_times"][1:] if not np.isnan(t)]) if driver_lap_data else None
+    laps_within_3pct = 0
+    if hot_lap_global and n_laps > 1:
+        laps_excluding_first = lap_times[1:]
+        within_mask = laps_excluding_first <= (hot_lap_global * 1.03)
+        laps_within_3pct = round(100.0 * np.sum(within_mask) / len(laps_excluding_first), 1)
+
     results.append({
         "Pos": pos_idx,
-        "Driver (Nr)": display,
+        "Driver (No)": display,
         "Laps": n_laps,
         "Race Time": format_time_mm_ss_decimal(total_time),
+        "Best Lap": format_time_ss_decimal(best_lap),
         "90 percentile lap": f"{avg_clean_lap:.2f}" if avg_clean_lap else "0.00",
+        "Consistency": f"{consistency:.1f}%",
+        "Laps within 3% of hot lap": f"{laps_within_3pct:.0f}%",
         "Fuel Stops": len(fuel_stops_idx),
         "Avg Fuel Interval": format_time_mm_ss(avg_fuel_interval),
         "Avg Fuel Stop Time": format_time_ss_decimal(avg_fuel_stop_time),
-        "No. of Events/Incidents": total_incident_laps,
+        "Events/Incidents": total_incident_laps,
         "Fuel Time Lost": format_time_mm_ss_decimal(fuel_time_lost),
-        "Events Time Lost": format_time_mm_ss_decimal(total_incident_time_lost),
-        "Consistency %": f"{consistency:.1f}"
+        "Events Time Lost": format_time_mm_ss_decimal(total_incident_time_lost)
     })
 
     if driver_events:
         verbose_log[display] = driver_events
 
-# Build summary DataFrame and keep finishing order from summary
+# Find and mark / trophies top three drivers for some metrics  --------------------
 summary_df = pd.DataFrame(results)
 if not summary_df.empty:
-    summary_df.sort_values(by=["Pos"], inplace=True)
+    # 1. Fastest laps — lower is better
+    summary_df = award_trophies(summary_df, "Best Lap", higher_is_better=False)
 
-    # --- Ensure "90 percentile lap" is numeric for ranking ---
-    if "90 percentile lap" in summary_df.columns:
-        summary_df["90 percentile lap (num)"] = pd.to_numeric(
-            summary_df["90 percentile lap"], errors="coerce"
-        )
+    # 2. Fastest 90 percentile laps — lower is better
+    summary_df = award_trophies(summary_df, "90 percentile lap", higher_is_better=False)
 
-        # --- Top 3 fastest 90 percentile laps (lower is better) ---
-        top3_fast = summary_df.nsmallest(3, "90 percentile lap (num)")
+    # 3. Consistency — higher is better
+    summary_df = award_trophies(summary_df, "Consistency", higher_is_better=True)
 
-        for i, (_, row) in enumerate(top3_fast.iterrows()):
-            summary_df.loc[
-                summary_df["Driver (Nr)"] == row["Driver (Nr)"],
-                "90 percentile lap"
-            ] = f"  {row['90 percentile lap']} {TROPHIES[i]}"
+    # 4. % laps within 3% of hot lap — higher is better
+    summary_df = award_trophies(summary_df, "Laps within 3% of hot lap", higher_is_better=True)
 
-    # --- Top 3 consistency (higher is better) ---
-    if "Consistency %" in summary_df.columns:
-        summary_df["Consistency (num)"] = pd.to_numeric(
-            summary_df["Consistency %"], errors="coerce"
-        )
-        top3_cons = summary_df.nlargest(3, "Consistency (num)")
-
-        for i, (_, row) in enumerate(top3_cons.iterrows()):
-            summary_df.loc[
-                summary_df["Driver (Nr)"] == row["Driver (Nr)"],
-                "Consistency %"
-            ] = f"  {row['Consistency %']} {TROPHIES[i]}"
-
-
-# ---------------- PDF Report ----------------
-#pdf_name = os.path.splitext(os.path.basename(csv_file))[0] + ".pdf"
-#margin = 25
-
+# ---------------- PDF Report generation ----------------
 if len(sys.argv) >= 3 and not sys.argv[2].startswith("--"):
     pdf_path = pathlib.Path(sys.argv[2])
 else:
     pdf_path = pathlib.Path(os.path.splitext(os.path.basename(csv_file))[0] + ".pdf")
 
-margin = 25
+margin = 20
 
 def add_header_and_footer(canvas, doc):
     """Draws a footer at the bottom right of each page."""
@@ -748,40 +800,85 @@ elements.append(Spacer(1, 8))
 if not summary_df.empty:
     header_row = [
         Paragraph("Pos", center_bold),
-        Paragraph("Driver (Nr)", center_bold),
+        Paragraph("Driver (No)", center_bold),
         Paragraph("Laps", center_bold),
-        Paragraph("Race Time", center_bold),
+        Paragraph("Race<br/>Time", center_bold),
+        Paragraph("Best<br/>Lap", center_bold),
         Paragraph("90 percentile lap", center_bold),
-        Paragraph("Consistency %", center_bold),
-        Paragraph("Fuel Stops", center_bold),
+        Paragraph("Consistency", center_bold),
+        Paragraph("Laps<br/>within 3%<br/>of hot lap", center_bold),
+        Paragraph("Fuel<br/>Stops", center_bold),
         Paragraph("Avg Fuel<br/>Interval", center_bold),
-        Paragraph("Avg Fuel Stop Time", center_bold),
-        Paragraph("No. of Events/Incidents", center_bold),
+        Paragraph("Avg Fuel<br/>Stop Time", center_bold),
+        Paragraph("Events/<br/>Incidents", center_bold),
         Paragraph("Fuel Time Lost", center_bold),
         Paragraph("Events Time Lost", center_bold),
     ]
     table_data = [header_row] + summary_df[[
-        "Pos", "Driver (Nr)", "Laps", "Race Time", "90 percentile lap", "Consistency %",
-        "Fuel Stops", "Avg Fuel Interval", "Avg Fuel Stop Time",
-        "No. of Events/Incidents", "Fuel Time Lost", "Events Time Lost"
+        "Pos",
+        "Driver (No)",
+        "Laps",
+        "Race Time",
+        "Best Lap",
+        "90 percentile lap",
+        "Consistency",
+        "Laps within 3% of hot lap",
+        "Fuel Stops",
+        "Avg Fuel Interval",
+        "Avg Fuel Stop Time",
+        "Events/Incidents",
+        "Fuel Time Lost",
+        "Events Time Lost"
     ]].values.tolist()
 
-    available_width = landscape(A4)[0] - 2 * margin
-    col_ratios = [0.05, 0.22, 0.06, 0.10, 0.08, 0.06, 0.08, 0.12, 0.06, 0.06, 0.06, 0.06]
+    # Leave a bit more margin around the table
+    left_right_margin = 30
+    available_width = landscape(A4)[0] - 2 * margin - (2 * left_right_margin)
+
+    # Balanced column width ratios (sum ≈ 1.0)
+    col_ratios = [
+        0.05,  # Pos
+        0.24,  # Driver (Nr)
+        0.05,  # Laps
+        0.09,  # Race Time
+        0.07,  # Best lap
+        0.07,  # 90 percentile lap
+        0.07,  # Consistency
+        0.07,  # Laps within 3% of hot lap
+        0.05,  # Fuel Stops
+        0.07,  # Avg Fuel Interval
+        0.05,  # Avg Fuel Stop Time
+        0.07,  # Events/Incidents
+        0.05,  # Fuel Time Lost
+        0.05,  # Events Time Lost
+    ]
     col_widths = [r * available_width for r in col_ratios]
 
     tbl = Table(table_data, colWidths=col_widths, repeatRows=1)
     tbl.setStyle(TableStyle([
+        # Header formatting
         ('BACKGROUND', (0,0), (-1,0), colors.grey),
         ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 0.25, colors.black),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
         ('FONTSIZE', (0,0), (-1,0), 9),
+
+        # Body formatting
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('FONTSIZE', (0,1), (-1,-1), 8),
+        ('GRID', (0,0), (-1,-1), 0.25, colors.black),
+
+        # Padding tweaks to make the layout tighter
+        ('LEFTPADDING', (0,0), (-1,-1), 2),
+        ('RIGHTPADDING', (0,0), (-1,-1), 2),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
+
+    # Add horizontal spacing (visual margins)
+    elements.append(Spacer(1, 4))
     elements.append(tbl)
+    elements.append(Spacer(1, 4))
 
     # foot note
     note_style = ParagraphStyle(
@@ -801,6 +898,11 @@ if not summary_df.empty:
     elements.append(Paragraph(
         "Note: 'Consistency %' is calculated as 100 × (1 − σ/μ), where σ = standard deviation of lap times and μ = average lap time. "
         "Higher values indicate more consistent driving.",
+        note_style
+    ))
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(
+        "Note: 'Laps within 3% of hot lap' is the percentage of a drivers laps that were within 3% of the best lap of the race across all drivers.",
         note_style
     ))
 
