@@ -11,10 +11,10 @@ https://myrcm.ch/myrcm/report/en/88236/363522# Final E
 # final run 2 of 5 min race
 https://myrcm.ch/myrcm/report/en/87693/361810# Final A run 2
 
-# Last Chance Final A
+# Verify that a long name of final such as "Last Chance Final A" without "" works
 https://myrcm.ch/myrcm/report/en/89785/367999 Last Chance Final A
 
-# Race with 9 drivers only - chart lines drawn at correct finishing position? Lap 0 handled correctly?
+# Race with 9 drivers only - chart lines drawn at correct finishing position? Is the Lap 0 in the csv handled correctly?
 https://myrcm.ch/myrcm/report/en/87792/362095 "1/2 Final B"
 
 # Race with 11 drivers, driver 11 with zero laps
@@ -46,3 +46,6 @@ https://myrcm.ch/myrcm/report/en/89707/367790# Final A run 2
 
 # Verify that a 1:12 race is classified as nofuel 
 https://myrcm.ch/myrcm/report/en/83771/350310 Final A run 1
+
+# Verify that the erronoues driver with start No 0 is handled how???
+https://myrcm.ch/myrcm/report/en/89911/368333 Final C
