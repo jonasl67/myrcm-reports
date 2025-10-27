@@ -1,0 +1,203 @@
+DEBUG: Debug / Verbose logging enabled
+INFO: Loading race data from NtsM31123_m_chassis_finals_a_final_run_1.csv
+INFO: ⚡ Auto-detected a no-refuel race → disabling fuel stop classification
+INFO: Processing driver lap data...
+INFO: Analyzing race events and computing metrics...
+INFO: Computing Driver Performance Index...
+DEBUG: ⏹️  Opponent Thomas Teigen retired at 484.0s — stop comparing against Jonas Ramsrud
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Espen Myhre on driver lap 16 (opponent lap 14) (Δ 1->2, driver elapsed=131.1s, opponent elapsed=120.8s, lap loss vs 10th percentile=0.791s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Espen Myhre on driver lap 29 (opponent lap 26) (Δ 2->3, driver elapsed=242.2s, opponent elapsed=233.4s, lap loss vs 10th percentile=0.086s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Espen Myhre on driver lap 35 (opponent lap 31) (Δ 3->4, driver elapsed=293.6s, opponent elapsed=283.7s, lap loss vs 10th percentile=0.397s)
+DEBUG: ⏹️  Opponent Espen Myhre retired at 484.6s — stop comparing against Jonas Ramsrud
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Arild Andersen on driver lap 5 (opponent lap 3) (Δ 1->2, driver elapsed=37.0s, opponent elapsed=27.2s, lap loss vs 10th percentile=0.162s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Arild Andersen on driver lap 12 (opponent lap 9) (Δ 2->3, driver elapsed=96.6s, opponent elapsed=87.7s, lap loss vs 10th percentile=0.172s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Arild Andersen on driver lap 19 (opponent lap 15) (Δ 3->4, driver elapsed=156.7s, opponent elapsed=147.3s, lap loss vs 10th percentile=0.367s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Arild Andersen on driver lap 27 (opponent lap 22) (Δ 4->5, driver elapsed=225.1s, opponent elapsed=216.1s, lap loss vs 10th percentile=0.229s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Arild Andersen on driver lap 34 (opponent lap 28) (Δ 5->6, driver elapsed=284.8s, opponent elapsed=275.6s, lap loss vs 10th percentile=0.143s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Arild Andersen on driver lap 44 (opponent lap 37) (Δ 6->7, driver elapsed=374.4s, opponent elapsed=365.4s, lap loss vs 10th percentile=0.608s)
+DEBUG: ⏹️  Opponent Arild Andersen retired at 480.1s — stop comparing against Jonas Ramsrud
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 4 (opponent lap 2) (Δ 1->2, driver elapsed=28.5s, opponent elapsed=19.4s, lap loss vs 10th percentile=0.038s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 6 (opponent lap 3) (Δ 2->3, driver elapsed=45.8s, opponent elapsed=31.8s, lap loss vs 10th percentile=0.496s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 9 (opponent lap 5) (Δ 3->4, driver elapsed=71.2s, opponent elapsed=61.1s, lap loss vs 10th percentile=0.214s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 13 (opponent lap 8) (Δ 4->5, driver elapsed=105.2s, opponent elapsed=95.0s, lap loss vs 10th percentile=0.263s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 16 (opponent lap 10) (Δ 5->6, driver elapsed=131.1s, opponent elapsed=119.8s, lap loss vs 10th percentile=0.791s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 19 (opponent lap 12) (Δ 6->7, driver elapsed=156.7s, opponent elapsed=142.5s, lap loss vs 10th percentile=0.367s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 23 (opponent lap 15) (Δ 7->8, driver elapsed=191.0s, opponent elapsed=182.0s, lap loss vs 10th percentile=0.316s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 27 (opponent lap 18) (Δ 8->9, driver elapsed=225.1s, opponent elapsed=215.4s, lap loss vs 10th percentile=0.229s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 28 (opponent lap 18) (Δ 9->10, driver elapsed=233.7s, opponent elapsed=215.4s, lap loss vs 10th percentile=0.225s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 32 (opponent lap 21) (Δ 10->11, driver elapsed=267.7s, opponent elapsed=257.9s, lap loss vs 10th percentile=0.243s)
+DEBUG: ✅ LAPPING DETECTED: Jonas Ramsrud lapped Trond Langedrag on driver lap 35 (opponent lap 23) (Δ 11->12, driver elapsed=293.6s, opponent elapsed=282.3s, lap loss vs 10th percentile=0.397s)
+DEBUG: ⏹️  Opponent Trond Langedrag retired at 494.4s — stop comparing against Jonas Ramsrud
+DEBUG: ⏹️  Opponent Unnamed: 6 retired at 0.0s — stop comparing against Jonas Ramsrud
+DEBUG: ⏹️  Opponent Unnamed: 7 retired at 0.0s — stop comparing against Jonas Ramsrud
+DEBUG: ⏹️  Opponent Unnamed: 8 retired at 0.0s — stop comparing against Jonas Ramsrud
+DEBUG: ⏹️  Opponent Unnamed: 9 retired at 0.0s — stop comparing against Jonas Ramsrud
+DEBUG: ⏹️  Opponent Unnamed: 10 retired at 0.0s — stop comparing against Jonas Ramsrud
+DEBUG: 🔍 SUMMARY: Jonas Ramsrud → Lapped others=20, Lapped by others=0, Avg time lost when lapping=0.327s, Avg time lost when lapped=0.000s
+
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Espen Myhre on driver lap 21 (opponent lap 19) (Δ 1->2, driver elapsed=176.8s, opponent elapsed=167.2s, lap loss vs 10th percentile=0.179s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Espen Myhre on driver lap 33 (opponent lap 30) (Δ 2->3, driver elapsed=282.4s, opponent elapsed=268.8s, lap loss vs 10th percentile=0.233s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Espen Myhre on driver lap 42 (opponent lap 38) (Δ 3->4, driver elapsed=361.4s, opponent elapsed=352.2s, lap loss vs 10th percentile=0.256s)
+DEBUG: ⏹️  Opponent Espen Myhre retired at 484.6s — stop comparing against Thomas Teigen
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Arild Andersen on driver lap 5 (opponent lap 3) (Δ 1->2, driver elapsed=37.6s, opponent elapsed=27.2s, lap loss vs 10th percentile=0.184s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Arild Andersen on driver lap 13 (opponent lap 10) (Δ 2->3, driver elapsed=108.2s, opponent elapsed=98.8s, lap loss vs 10th percentile=0.934s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Arild Andersen on driver lap 22 (opponent lap 18) (Δ 3->4, driver elapsed=185.6s, opponent elapsed=176.2s, lap loss vs 10th percentile=0.313s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Arild Andersen on driver lap 30 (opponent lap 25) (Δ 4->5, driver elapsed=256.0s, opponent elapsed=245.9s, lap loss vs 10th percentile=0.773s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Arild Andersen on driver lap 38 (opponent lap 32) (Δ 5->6, driver elapsed=326.6s, opponent elapsed=315.8s, lap loss vs 10th percentile=1.068s)
+DEBUG: ⏹️  Opponent Arild Andersen retired at 480.1s — stop comparing against Thomas Teigen
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 4 (opponent lap 2) (Δ 1->2, driver elapsed=29.0s, opponent elapsed=19.4s, lap loss vs 10th percentile=0.144s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 6 (opponent lap 3) (Δ 2->3, driver elapsed=46.4s, opponent elapsed=31.8s, lap loss vs 10th percentile=0.430s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 9 (opponent lap 5) (Δ 3->4, driver elapsed=72.0s, opponent elapsed=61.1s, lap loss vs 10th percentile=0.164s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 14 (opponent lap 9) (Δ 4->5, driver elapsed=116.6s, opponent elapsed=107.1s, lap loss vs 10th percentile=0.000s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 18 (opponent lap 12) (Δ 5->6, driver elapsed=151.1s, opponent elapsed=142.5s, lap loss vs 10th percentile=0.000s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 20 (opponent lap 13) (Δ 6->7, driver elapsed=168.3s, opponent elapsed=158.1s, lap loss vs 10th percentile=0.255s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 24 (opponent lap 16) (Δ 7->8, driver elapsed=203.0s, opponent elapsed=193.8s, lap loss vs 10th percentile=0.420s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 27 (opponent lap 18) (Δ 8->9, driver elapsed=229.6s, opponent elapsed=215.4s, lap loss vs 10th percentile=0.775s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 30 (opponent lap 20) (Δ 9->10, driver elapsed=256.0s, opponent elapsed=245.7s, lap loss vs 10th percentile=0.773s)
+DEBUG: ✅ LAPPING DETECTED: Thomas Teigen lapped Trond Langedrag on driver lap 34 (opponent lap 23) (Δ 10->11, driver elapsed=291.1s, opponent elapsed=282.3s, lap loss vs 10th percentile=0.333s)
+DEBUG: ⏹️  Opponent Trond Langedrag retired at 494.4s — stop comparing against Thomas Teigen
+DEBUG: ⏹️  Opponent Unnamed: 6 retired at 0.0s — stop comparing against Thomas Teigen
+DEBUG: ⏹️  Opponent Unnamed: 7 retired at 0.0s — stop comparing against Thomas Teigen
+DEBUG: ⏹️  Opponent Unnamed: 8 retired at 0.0s — stop comparing against Thomas Teigen
+DEBUG: ⏹️  Opponent Unnamed: 9 retired at 0.0s — stop comparing against Thomas Teigen
+DEBUG: ⏹️  Opponent Unnamed: 10 retired at 0.0s — stop comparing against Thomas Teigen
+DEBUG: 🔍 SUMMARY: Thomas Teigen → Lapped others=18, Lapped by others=0, Avg time lost when lapping=0.402s, Avg time lost when lapped=0.000s
+
+DEBUG: ⚠️ LAPPED-BY DETECTED: Espen Myhre was lapped by Jonas Ramsrud on driver lap 27 (opponent lap 29) (Δ -1->-2, driver elapsed=242.8s, opponent elapsed=242.2s, lap loss vs 10th percentile=1.046s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Espen Myhre was lapped by Jonas Ramsrud on driver lap 32 (opponent lap 35) (Δ -2->-3, driver elapsed=296.6s, opponent elapsed=293.6s, lap loss vs 10th percentile=4.529s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Espen Myhre was lapped by Thomas Teigen on driver lap 31 (opponent lap 33) (Δ -1->-2, driver elapsed=283.7s, opponent elapsed=282.4s, lap loss vs 10th percentile=6.473s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Espen Myhre was lapped by Thomas Teigen on driver lap 39 (opponent lap 42) (Δ -2->-3, driver elapsed=362.1s, opponent elapsed=361.4s, lap loss vs 10th percentile=1.496s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Arild Andersen on driver lap 10 (opponent lap 8) (Δ 1->2, driver elapsed=86.1s, opponent elapsed=76.9s, lap loss vs 10th percentile=0.426s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Arild Andersen on driver lap 24 (opponent lap 21) (Δ 2->3, driver elapsed=215.6s, opponent elapsed=205.1s, lap loss vs 10th percentile=0.790s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Arild Andersen on driver lap 35 (opponent lap 32) (Δ 2->3, driver elapsed=325.4s, opponent elapsed=315.8s, lap loss vs 10th percentile=0.721s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Arild Andersen on driver lap 47 (opponent lap 43) (Δ 3->4, driver elapsed=433.0s, opponent elapsed=423.2s, lap loss vs 10th percentile=0.635s)
+DEBUG: ⏹️  Opponent Arild Andersen retired at 480.1s — stop comparing against Espen Myhre
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 5 (opponent lap 3) (Δ 1->2, driver elapsed=42.5s, opponent elapsed=31.8s, lap loss vs 10th percentile=0.231s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 7 (opponent lap 4) (Δ 2->3, driver elapsed=59.4s, opponent elapsed=49.4s, lap loss vs 10th percentile=0.057s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 12 (opponent lap 8) (Δ 3->4, driver elapsed=103.6s, opponent elapsed=95.0s, lap loss vs 10th percentile=0.082s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 15 (opponent lap 10) (Δ 4->5, driver elapsed=131.7s, opponent elapsed=119.8s, lap loss vs 10th percentile=2.562s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 18 (opponent lap 12) (Δ 5->6, driver elapsed=157.4s, opponent elapsed=142.5s, lap loss vs 10th percentile=0.236s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 25 (opponent lap 18) (Δ 6->7, driver elapsed=224.6s, opponent elapsed=215.4s, lap loss vs 10th percentile=0.539s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 26 (opponent lap 18) (Δ 7->8, driver elapsed=233.4s, opponent elapsed=215.4s, lap loss vs 10th percentile=0.416s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 30 (opponent lap 21) (Δ 8->9, driver elapsed=268.8s, opponent elapsed=257.9s, lap loss vs 10th percentile=0.201s)
+DEBUG: ✅ LAPPING DETECTED: Espen Myhre lapped Trond Langedrag on driver lap 34 (opponent lap 25) (Δ 8->9, driver elapsed=316.2s, opponent elapsed=306.2s, lap loss vs 10th percentile=0.736s)
+DEBUG: ⏹️  Opponent Trond Langedrag retired at 494.4s — stop comparing against Espen Myhre
+DEBUG: ⏹️  Opponent Unnamed: 6 retired at 0.0s — stop comparing against Espen Myhre
+DEBUG: ⏹️  Opponent Unnamed: 7 retired at 0.0s — stop comparing against Espen Myhre
+DEBUG: ⏹️  Opponent Unnamed: 8 retired at 0.0s — stop comparing against Espen Myhre
+DEBUG: ⏹️  Opponent Unnamed: 9 retired at 0.0s — stop comparing against Espen Myhre
+DEBUG: ⏹️  Opponent Unnamed: 10 retired at 0.0s — stop comparing against Espen Myhre
+DEBUG: 🔍 SUMMARY: Espen Myhre → Lapped others=13, Lapped by others=4, Avg time lost when lapping=0.587s, Avg time lost when lapped=3.386s
+
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Jonas Ramsrud on driver lap 10 (opponent lap 12) (Δ -1->-2, driver elapsed=98.8s, opponent elapsed=96.6s, lap loss vs 10th percentile=2.068s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Jonas Ramsrud on driver lap 16 (opponent lap 19) (Δ -2->-3, driver elapsed=157.0s, opponent elapsed=156.7s, lap loss vs 10th percentile=0.682s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Jonas Ramsrud on driver lap 23 (opponent lap 27) (Δ -3->-4, driver elapsed=226.3s, opponent elapsed=225.1s, lap loss vs 10th percentile=1.139s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Jonas Ramsrud on driver lap 29 (opponent lap 34) (Δ -4->-5, driver elapsed=285.6s, opponent elapsed=284.8s, lap loss vs 10th percentile=0.997s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Jonas Ramsrud on driver lap 38 (opponent lap 44) (Δ -5->-6, driver elapsed=375.4s, opponent elapsed=374.4s, lap loss vs 10th percentile=0.995s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Jonas Ramsrud on driver lap 46 (opponent lap 53) (Δ -6->-7, driver elapsed=452.2s, opponent elapsed=451.6s, lap loss vs 10th percentile=0.562s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Thomas Teigen on driver lap 11 (opponent lap 13) (Δ -1->-2, driver elapsed=109.1s, opponent elapsed=108.2s, lap loss vs 10th percentile=1.224s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Thomas Teigen on driver lap 19 (opponent lap 22) (Δ -2->-3, driver elapsed=186.3s, opponent elapsed=185.6s, lap loss vs 10th percentile=1.062s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Thomas Teigen on driver lap 26 (opponent lap 30) (Δ -3->-4, driver elapsed=256.1s, opponent elapsed=256.0s, lap loss vs 10th percentile=1.188s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Thomas Teigen on driver lap 33 (opponent lap 38) (Δ -4->-5, driver elapsed=326.9s, opponent elapsed=326.6s, lap loss vs 10th percentile=2.014s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Thomas Teigen on driver lap 44 (opponent lap 50) (Δ -5->-6, driver elapsed=433.5s, opponent elapsed=432.2s, lap loss vs 10th percentile=1.224s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Espen Myhre on driver lap 22 (opponent lap 24) (Δ -1->-2, driver elapsed=216.1s, opponent elapsed=215.6s, lap loss vs 10th percentile=1.925s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Espen Myhre on driver lap 33 (opponent lap 35) (Δ -1->-2, driver elapsed=326.9s, opponent elapsed=325.4s, lap loss vs 10th percentile=2.014s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Arild Andersen was lapped by Espen Myhre on driver lap 44 (opponent lap 47) (Δ -2->-3, driver elapsed=433.5s, opponent elapsed=433.0s, lap loss vs 10th percentile=1.224s)
+DEBUG: ✅ LAPPING DETECTED: Arild Andersen lapped Trond Langedrag on driver lap 5 (opponent lap 3) (Δ 1->2, driver elapsed=47.8s, opponent elapsed=31.8s, lap loss vs 10th percentile=0.971s)
+DEBUG: ✅ LAPPING DETECTED: Arild Andersen lapped Trond Langedrag on driver lap 12 (opponent lap 9) (Δ 2->3, driver elapsed=118.6s, opponent elapsed=107.1s, lap loss vs 10th percentile=0.484s)
+DEBUG: ✅ LAPPING DETECTED: Arild Andersen lapped Trond Langedrag on driver lap 16 (opponent lap 12) (Δ 3->4, driver elapsed=157.0s, opponent elapsed=142.5s, lap loss vs 10th percentile=0.682s)
+DEBUG: ✅ LAPPING DETECTED: Arild Andersen lapped Trond Langedrag on driver lap 21 (opponent lap 16) (Δ 4->5, driver elapsed=205.1s, opponent elapsed=193.8s, lap loss vs 10th percentile=0.293s)
+DEBUG: ✅ LAPPING DETECTED: Arild Andersen lapped Trond Langedrag on driver lap 23 (opponent lap 18) (Δ 4->5, driver elapsed=226.3s, opponent elapsed=215.4s, lap loss vs 10th percentile=1.139s)
+DEBUG: ✅ LAPPING DETECTED: Arild Andersen lapped Trond Langedrag on driver lap 26 (opponent lap 20) (Δ 5->6, driver elapsed=256.1s, opponent elapsed=245.7s, lap loss vs 10th percentile=1.188s)
+DEBUG: ✅ LAPPING DETECTED: Arild Andersen lapped Trond Langedrag on driver lap 31 (opponent lap 24) (Δ 6->7, driver elapsed=305.6s, opponent elapsed=293.8s, lap loss vs 10th percentile=0.604s)
+DEBUG: ⏭️  SKIP: Arild Andersen vs Trond Langedrag on driver lap 34 (opponent lap 27) due to: Opponent Trond Langedrag major incident on opponent lap 28 (Δ 7->7)
+DEBUG: ⏭️  SKIP: Arild Andersen vs Trond Langedrag on driver lap 35 (opponent lap 27) due to: Opponent Trond Langedrag major incident on opponent lap 28 (Δ 7->8)
+DEBUG: ⏹️  Opponent Trond Langedrag retired at 494.4s — stop comparing against Arild Andersen
+DEBUG: ⏹️  Opponent Unnamed: 6 retired at 0.0s — stop comparing against Arild Andersen
+DEBUG: ⏹️  Opponent Unnamed: 7 retired at 0.0s — stop comparing against Arild Andersen
+DEBUG: ⏹️  Opponent Unnamed: 8 retired at 0.0s — stop comparing against Arild Andersen
+DEBUG: ⏹️  Opponent Unnamed: 9 retired at 0.0s — stop comparing against Arild Andersen
+DEBUG: ⏹️  Opponent Unnamed: 10 retired at 0.0s — stop comparing against Arild Andersen
+DEBUG: 🔍 SUMMARY: Arild Andersen → Lapped others=7, Lapped by others=14, Avg time lost when lapping=0.766s, Avg time lost when lapped=1.308s
+
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 4 (opponent lap 6) (Δ -1->-2, driver elapsed=49.4s, opponent elapsed=45.8s, lap loss vs 10th percentile=7.742s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 6 (opponent lap 9) (Δ -2->-3, driver elapsed=73.6s, opponent elapsed=71.2s, lap loss vs 10th percentile=2.630s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 9 (opponent lap 13) (Δ -3->-4, driver elapsed=107.1s, opponent elapsed=105.2s, lap loss vs 10th percentile=2.254s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 11 (opponent lap 16) (Δ -4->-5, driver elapsed=132.6s, opponent elapsed=131.1s, lap loss vs 10th percentile=2.942s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 13 (opponent lap 19) (Δ -5->-6, driver elapsed=158.1s, opponent elapsed=156.7s, lap loss vs 10th percentile=5.762s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 16 (opponent lap 23) (Δ -6->-7, driver elapsed=193.8s, opponent elapsed=191.0s, lap loss vs 10th percentile=1.955s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 19 (opponent lap 28) (Δ -7->-9, driver elapsed=234.1s, opponent elapsed=233.7s, lap loss vs 10th percentile=8.944s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 22 (opponent lap 32) (Δ -9->-10, driver elapsed=271.5s, opponent elapsed=267.7s, lap loss vs 10th percentile=3.794s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 24 (opponent lap 35) (Δ -10->-11, driver elapsed=293.8s, opponent elapsed=293.6s, lap loss vs 10th percentile=1.654s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 26 (opponent lap 38) (Δ -11->-12, driver elapsed=322.7s, opponent elapsed=320.4s, lap loss vs 10th percentile=6.670s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Jonas Ramsrud on driver lap 28 (opponent lap 43) due to: Driver Trond Langedrag major incident on lap 28 (Δ -12->-15)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 29 (opponent lap 45) (Δ -15->-16, driver elapsed=386.0s, opponent elapsed=382.8s, lap loss vs 10th percentile=5.570s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 32 (opponent lap 49) (Δ -16->-17, driver elapsed=420.1s, opponent elapsed=416.9s, lap loss vs 10th percentile=2.773s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Jonas Ramsrud on driver lap 34 (opponent lap 52) (Δ -17->-18, driver elapsed=445.1s, opponent elapsed=442.8s, lap loss vs 10th percentile=5.193s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Jonas Ramsrud on driver lap 35 (opponent lap 57) due to: Driver Trond Langedrag major incident on lap 35 (Δ -18->-22)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 4 (opponent lap 6) (Δ -1->-2, driver elapsed=49.4s, opponent elapsed=46.4s, lap loss vs 10th percentile=7.742s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 6 (opponent lap 9) (Δ -2->-3, driver elapsed=73.6s, opponent elapsed=72.0s, lap loss vs 10th percentile=2.630s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 10 (opponent lap 14) (Δ -3->-4, driver elapsed=119.8s, opponent elapsed=116.6s, lap loss vs 10th percentile=2.896s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 13 (opponent lap 18) (Δ -4->-5, driver elapsed=158.1s, opponent elapsed=151.1s, lap loss vs 10th percentile=5.762s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 14 (opponent lap 20) (Δ -5->-6, driver elapsed=170.4s, opponent elapsed=168.3s, lap loss vs 10th percentile=2.461s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 17 (opponent lap 24) (Δ -6->-7, driver elapsed=205.6s, opponent elapsed=203.0s, lap loss vs 10th percentile=2.003s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 19 (opponent lap 27) (Δ -7->-8, driver elapsed=234.1s, opponent elapsed=229.6s, lap loss vs 10th percentile=8.944s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 21 (opponent lap 30) (Δ -8->-9, driver elapsed=257.9s, opponent elapsed=256.0s, lap loss vs 10th percentile=2.380s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 24 (opponent lap 34) (Δ -9->-10, driver elapsed=293.8s, opponent elapsed=291.1s, lap loss vs 10th percentile=1.654s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 26 (opponent lap 37) (Δ -10->-11, driver elapsed=322.7s, opponent elapsed=317.2s, lap loss vs 10th percentile=6.670s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Thomas Teigen on driver lap 28 (opponent lap 42) due to: Driver Trond Langedrag major incident on lap 28 (Δ -11->-14)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 29 (opponent lap 44) (Δ -14->-15, driver elapsed=386.0s, opponent elapsed=380.3s, lap loss vs 10th percentile=5.570s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 31 (opponent lap 47) (Δ -15->-16, driver elapsed=407.5s, opponent elapsed=406.5s, lap loss vs 10th percentile=1.262s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Thomas Teigen on driver lap 34 (opponent lap 51) (Δ -16->-17, driver elapsed=445.1s, opponent elapsed=440.9s, lap loss vs 10th percentile=5.193s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Thomas Teigen on driver lap 35 (opponent lap 56) due to: Driver Trond Langedrag major incident on lap 35 (Δ -17->-21)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 5 (opponent lap 7) (Δ -1->-2, driver elapsed=61.1s, opponent elapsed=59.4s, lap loss vs 10th percentile=1.912s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 9 (opponent lap 12) (Δ -2->-3, driver elapsed=107.1s, opponent elapsed=103.6s, lap loss vs 10th percentile=2.254s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 11 (opponent lap 15) (Δ -3->-4, driver elapsed=132.6s, opponent elapsed=131.7s, lap loss vs 10th percentile=2.942s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 13 (opponent lap 18) (Δ -4->-5, driver elapsed=158.1s, opponent elapsed=157.4s, lap loss vs 10th percentile=5.762s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 19 (opponent lap 26) (Δ -5->-7, driver elapsed=234.1s, opponent elapsed=233.4s, lap loss vs 10th percentile=8.944s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 22 (opponent lap 30) (Δ -7->-8, driver elapsed=271.5s, opponent elapsed=268.8s, lap loss vs 10th percentile=3.794s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 26 (opponent lap 34) (Δ -7->-8, driver elapsed=322.7s, opponent elapsed=316.2s, lap loss vs 10th percentile=6.670s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Espen Myhre on driver lap 28 (opponent lap 39) due to: Driver Trond Langedrag major incident on lap 28 (Δ -8->-11)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 29 (opponent lap 41) (Δ -11->-12, driver elapsed=386.0s, opponent elapsed=380.8s, lap loss vs 10th percentile=5.570s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 31 (opponent lap 44) (Δ -12->-13, driver elapsed=407.5s, opponent elapsed=406.8s, lap loss vs 10th percentile=1.262s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Espen Myhre on driver lap 34 (opponent lap 48) (Δ -13->-14, driver elapsed=445.1s, opponent elapsed=441.7s, lap loss vs 10th percentile=5.193s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Espen Myhre on driver lap 35 (opponent lap 53) due to: Driver Trond Langedrag major incident on lap 35 (Δ -14->-18)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 10 (opponent lap 12) (Δ -1->-2, driver elapsed=119.8s, opponent elapsed=118.6s, lap loss vs 10th percentile=2.896s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 13 (opponent lap 16) (Δ -2->-3, driver elapsed=158.1s, opponent elapsed=157.0s, lap loss vs 10th percentile=5.762s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 17 (opponent lap 21) (Δ -3->-4, driver elapsed=205.6s, opponent elapsed=205.1s, lap loss vs 10th percentile=2.003s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 19 (opponent lap 23) (Δ -3->-4, driver elapsed=234.1s, opponent elapsed=226.3s, lap loss vs 10th percentile=8.944s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 21 (opponent lap 26) (Δ -4->-5, driver elapsed=257.9s, opponent elapsed=256.1s, lap loss vs 10th percentile=2.380s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 25 (opponent lap 31) (Δ -5->-6, driver elapsed=306.2s, opponent elapsed=305.6s, lap loss vs 10th percentile=2.605s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Arild Andersen on driver lap 28 (opponent lap 37) due to: Driver Trond Langedrag major incident on lap 28 (Δ -6->-9)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 29 (opponent lap 39) (Δ -9->-10, driver elapsed=386.0s, opponent elapsed=385.7s, lap loss vs 10th percentile=5.570s)
+DEBUG: ⚠️ LAPPED-BY DETECTED: Trond Langedrag was lapped by Arild Andersen on driver lap 34 (opponent lap 45) (Δ -10->-11, driver elapsed=445.1s, opponent elapsed=442.6s, lap loss vs 10th percentile=5.193s)
+DEBUG: ⏭️  SKIP: Trond Langedrag vs Arild Andersen on driver lap 35 (opponent lap 49) due to: Driver Trond Langedrag major incident on lap 35 (Δ -11->-14)
+DEBUG: ⏹️  Opponent Unnamed: 6 retired at 0.0s — stop comparing against Trond Langedrag
+DEBUG: ⏹️  Opponent Unnamed: 7 retired at 0.0s — stop comparing against Trond Langedrag
+DEBUG: ⏹️  Opponent Unnamed: 8 retired at 0.0s — stop comparing against Trond Langedrag
+DEBUG: ⏹️  Opponent Unnamed: 9 retired at 0.0s — stop comparing against Trond Langedrag
+DEBUG: ⏹️  Opponent Unnamed: 10 retired at 0.0s — stop comparing against Trond Langedrag
+DEBUG: 🔍 SUMMARY: Trond Langedrag → Lapped others=0, Lapped by others=44, Avg time lost when lapping=0.000s, Avg time lost when lapped=4.380s
+
+DEBUG: 🔍 SUMMARY: Unnamed: 6 → Lapped others=0, Lapped by others=0, Avg time lost when lapping=0.000s, Avg time lost when lapped=0.000s
+
+DEBUG: 🔍 SUMMARY: Unnamed: 7 → Lapped others=0, Lapped by others=0, Avg time lost when lapping=0.000s, Avg time lost when lapped=0.000s
+
+DEBUG: 🔍 SUMMARY: Unnamed: 8 → Lapped others=0, Lapped by others=0, Avg time lost when lapping=0.000s, Avg time lost when lapped=0.000s
+
+DEBUG: 🔍 SUMMARY: Unnamed: 9 → Lapped others=0, Lapped by others=0, Avg time lost when lapping=0.000s, Avg time lost when lapped=0.000s
+
+DEBUG: 🔍 SUMMARY: Unnamed: 10 → Lapped others=0, Lapped by others=0, Avg time lost when lapping=0.000s, Avg time lost when lapped=0.000s
+
+DEBUG: === Racecraft Balance Check ===
+DEBUG:   Jonas Ramsrud             Overtakes:   0  Losses:   0
+DEBUG:   Thomas Teigen             Overtakes:   0  Losses:   0
+DEBUG:   Espen Myhre               Overtakes:   0  Losses:   0
+DEBUG:   Arild Andersen            Overtakes:   0  Losses:   0
+DEBUG:   Trond Langedrag           Overtakes:   0  Losses:   0
+DEBUG:   TOTAL                     Overtakes:   0  Losses:   0
+DEBUG:   Difference: 0 (tolerance: 0)
+DEBUG: ==================================================
+INFO: Generating PDF report...
+INFO: PDF written to NtsM31123_m_chassis_finals_a_final_run_1.pdf
+INFO: Analysis complete!

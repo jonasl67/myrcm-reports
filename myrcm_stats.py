@@ -108,7 +108,8 @@ class DriverData:
     
     # === Basic Metrics ===
     best_lap: float = 0.0
-    median_clean: float = 0.0
+    median_clean: float = 0.0  # 90th percentile
+    best_10pct: float = 0.0     # 10th percentile (fast baseline for lapping efficiency)
     total_raced_time: float = 0.0
     
     # === Speed Metrics ===
@@ -166,9 +167,14 @@ class DriverData:
         return self.best_lap
     
     def compute_median_clean_lap(self, percentile: int = 90) -> float:
-        """Calculate and store the median clean lap time."""
+        """Calculate and store the median clean lap time (90th percentile)."""
         self.median_clean = compute_clean_lap_time(self.lap_times, percentile)
         return self.median_clean
+    
+    def compute_best_10pct_lap(self, percentile: int = 10) -> float:
+        """Calculate and store the 10th percentile lap time (fast baseline for lapping efficiency)."""
+        self.best_10pct = compute_clean_lap_time(self.lap_times, percentile)
+        return self.best_10pct
     
     def compute_consistency_metrics(self):
         """Calculate and store consistency percentage"""
@@ -761,6 +767,7 @@ def analyze_driver_events(driver_data_dict, lap_positions, meta, global_hot_lap)
         driver = driver_data_dict[driver_key]
         
         driver.compute_median_clean_lap()
+        driver.compute_best_10pct_lap()
         classify_driver_events(driver, lap_positions, race_duration_sec)
         driver.compute_best_lap(exclude_first=True)
         driver.compute_laps_within_3pct(global_hot_lap)
@@ -959,62 +966,159 @@ def check_overtake_losses_balance(global_racecraft_debug, tolerance=0):
             f"Warning: overtake/loss mismatch detected: {total_overtakes} overtakes vs {total_losses} losses "
             f"(diff={diff}, tolerance={tolerance})"
         )
+def analyze_lapping_events(driver: DriverData, all_drivers: dict[str, DriverData]):
+    """
+    Analyze lapping and being-lapped events for a given driver.
 
-def analyze_lapping_events(driver, all_drivers, lap_positions):
-    """Analyze lapping events using DriverData objects."""
-    fuel_stops = set(driver.fuel_stops_idx)
-    major_incidents = set(driver.major_incidents)
-    driver_laps = driver.no_of_laps
-    median_clean = driver.median_clean
-    
+    Detects true lapping events (Δ >= +2 or <= -2) and measures how much
+    slower the driver's laps were compared to their 10th percentile (fast baseline)
+    when lapping or being lapped.
+
+    Args:
+        driver: DriverData instance for the driver being analyzed.
+        all_drivers: dict of all drivers (driver_key -> DriverData).
+
+    Returns:
+        dict with counts and average time lost (in seconds) when lapping and being-lapped.
+    """
+
+    driver_key = driver.driver_key
+    driver_name = driver.full_name
+    driver_lap_times = np.cumsum(driver.lap_times)
+    driver_total_laps = driver.no_of_laps
+    driver_fuel_stops = set(driver.fuel_stops_idx)
+    driver_incidents = set(driver.major_incidents)
+
     lappings = 0
     lapped_by = 0
-    lapping_deltas = []
-    lapped_by_deltas = []
-    
-    for other_key, other_driver in all_drivers.items():
-        if other_key == driver.driver_key:
+    lapping_deltas = []   # per-lap time lost vs 10th percentile when lapping others
+    lapped_deltas = []    # per-lap time lost vs 10th percentile when being lapped
+
+    for opponent in all_drivers.values():
+        if opponent.driver_key == driver_key:
             continue
-        
-        other_laps = other_driver.no_of_laps
-        other_positions = lap_positions.get(other_key, [])
-        
-        if not other_positions:
-            continue
-        
-        valid_laps = [
-            i for i in range(min(driver_laps, len(other_positions)))
-            if i not in fuel_stops
-            and i not in major_incidents
-            and other_positions[i] is not None
-        ]
-        
-        if not valid_laps:
-            continue
-        
-        lap_diff = driver_laps - other_laps
-        
-        if lap_diff >= 1:
-            lappings += 1
-            lapping_deltas.append(median_clean * 0.02 * lap_diff)
-        elif lap_diff <= -1:
-            lapped_by += 1
-            lapped_by_deltas.append(median_clean * 0.05 * abs(lap_diff))
-    
-    avg_time_lost_lappings = float(np.mean(lapping_deltas)) if lapping_deltas else 0.0
-    avg_time_lost_lapped = float(np.mean(lapped_by_deltas)) if lapped_by_deltas else 0.0
-    
-    # Store lapped_by count in driver object
-    driver.lappings_count = lappings
-    driver.lapped_by_count = lapped_by
-    
+
+        opponent_name = opponent.full_name
+        opponent_lap_times = np.cumsum(opponent.lap_times)
+        opponent_total_laps = opponent.no_of_laps
+        opponent_fuel_stops = set(opponent.fuel_stops_idx)
+        opponent_incidents = set(opponent.major_incidents)
+
+        prev_delta = None
+
+        for lap_idx, t in enumerate(driver_lap_times):
+            # Stop comparing if opponent retired
+            if lap_idx >= opponent_total_laps:
+                retire_time = opponent_lap_times[-1] if opponent_total_laps > 0 else 0
+                logger.debug(
+                    f"⏹️  Opponent {opponent_name} retired at {retire_time:.1f}s — "
+                    f"stop comparing against {driver_name}"
+                )
+                break
+
+            d_completed = lap_idx + 1
+            o_completed = np.searchsorted(opponent_lap_times, t, side="right")
+            delta = d_completed - o_completed
+
+            # --- Skip laps affected by fuel stops or incidents ---
+            skip_reasons = []
+            
+            # Check driver's fuel stops and incidents (using driver's lap index)
+            if lap_idx in driver_fuel_stops:
+                skip_reasons.append(f"Driver {driver_name} fuel stop on lap {lap_idx+1}")
+            if lap_idx in driver_incidents:
+                skip_reasons.append(f"Driver {driver_name} major incident on lap {lap_idx+1}")
+            
+            # Check opponent's fuel stops and incidents using TIME-BASED comparison
+            # We need to check if the opponent is currently in a fuel stop or incident
+            # at the driver's current elapsed time (t)
+            for opp_fuel_lap_idx in opponent_fuel_stops:
+                # Get the time window for this opponent fuel stop
+                if opp_fuel_lap_idx < len(opponent_lap_times):
+                    # Time when opponent started this lap
+                    opp_lap_start = opponent_lap_times[opp_fuel_lap_idx - 1] if opp_fuel_lap_idx > 0 else 0
+                    # Time when opponent finished this lap (includes fuel stop)
+                    opp_lap_end = opponent_lap_times[opp_fuel_lap_idx]
+                    # Check if driver's current time falls within opponent's fuel stop lap
+                    if opp_lap_start <= t <= opp_lap_end:
+                        skip_reasons.append(f"Opponent {opponent_name} fuel stop on opponent lap {opp_fuel_lap_idx+1}")
+                        break
+            
+            for opp_incident_lap_idx in opponent_incidents:
+                # Get the time window for this opponent incident
+                if opp_incident_lap_idx < len(opponent_lap_times):
+                    # Time when opponent started this lap
+                    opp_lap_start = opponent_lap_times[opp_incident_lap_idx - 1] if opp_incident_lap_idx > 0 else 0
+                    # Time when opponent finished this lap (includes incident)
+                    opp_lap_end = opponent_lap_times[opp_incident_lap_idx]
+                    # Check if driver's current time falls within opponent's incident lap
+                    if opp_lap_start <= t <= opp_lap_end:
+                        skip_reasons.append(f"Opponent {opponent_name} major incident on opponent lap {opp_incident_lap_idx+1}")
+                        break
+
+            if skip_reasons:
+                logger.debug(
+                    f"⏭️  SKIP: {driver_name} vs {opponent_name} on driver lap {lap_idx+1} (opponent lap {o_completed}) "
+                    f"due to: {', '.join(skip_reasons)} (Δ {prev_delta}->{delta})"
+                )
+                prev_delta = delta
+                continue
+
+            # --- Detect true lapping event (driver laps opponent) ---
+            if prev_delta is not None and delta > prev_delta:
+                if prev_delta >= 1 and delta >= prev_delta + 1:
+                    # Use 10th percentile as baseline (fast lap reference)
+                    lap_loss = max(0.0, driver.lap_times[lap_idx] - driver.best_10pct)
+                    lappings += 1
+                    lapping_deltas.append(lap_loss)
+                    
+                    # Get opponent's elapsed time at their current lap
+                    opponent_elapsed = opponent_lap_times[o_completed - 1] if o_completed > 0 else 0
+                    
+                    logger.debug(
+                        f"✅ LAPPING DETECTED: {driver_name} lapped {opponent_name} "
+                        f"on driver lap {lap_idx+1} (opponent lap {o_completed}) "
+                        f"(Δ {prev_delta}->{delta}, "
+                        f"driver elapsed={t:.1f}s, opponent elapsed={opponent_elapsed:.1f}s, "
+                        f"lap loss vs 10th percentile={lap_loss:.3f}s)"
+                    )
+
+            # --- Detect true being-lapped event (opponent laps driver) ---
+            elif prev_delta is not None and delta < prev_delta:
+                if prev_delta <= -1 and delta <= prev_delta - 1:
+                    # Use 10th percentile as baseline (fast lap reference)
+                    lap_loss = max(0.0, driver.lap_times[lap_idx] - driver.best_10pct)
+                    lapped_by += 1
+                    lapped_deltas.append(lap_loss)
+                    
+                    # Get opponent's elapsed time at their current lap
+                    opponent_elapsed = opponent_lap_times[o_completed - 1] if o_completed > 0 else 0
+                    
+                    logger.debug(
+                        f"⚠️ LAPPED-BY DETECTED: {driver_name} was lapped by {opponent_name} "
+                        f"on driver lap {lap_idx+1} (opponent lap {o_completed}) "
+                        f"(Δ {prev_delta}->{delta}, "
+                        f"driver elapsed={t:.1f}s, opponent elapsed={opponent_elapsed:.1f}s, "
+                        f"lap loss vs 10th percentile={lap_loss:.3f}s)"
+                    )
+
+            prev_delta = delta
+
+    avg_time_lost_lapping = float(np.mean(lapping_deltas)) if lapping_deltas else 0.0
+    avg_time_lost_lapped = float(np.mean(lapped_deltas)) if lapped_deltas else 0.0
+
+    logger.debug(
+        f"🔍 SUMMARY: {driver_name} → Lapped others={lappings}, Lapped by others={lapped_by}, "
+        f"Avg time lost when lapping={avg_time_lost_lapping:.3f}s, "
+        f"Avg time lost when lapped={avg_time_lost_lapped:.3f}s\n"
+    )
+
     return {
-        "lappings": lappings,
-        "lapped_by": lapped_by,
-        "avg_time_lost_lappings": avg_time_lost_lappings,
+        "lapped_others": lappings,
+        "lapped_by_others": lapped_by,
+        "avg_time_lost_lappings": avg_time_lost_lapping,
         "avg_time_lost_lapped": avg_time_lost_lapped,
     }
-
 def compute_racecraft_caps(driver_data_dict, over_pct=95, loss_pct=95):
     """Compute percentile caps for overtakes/losses normalization."""
     over_list = []
@@ -1154,15 +1258,23 @@ def compute_racecraft_index(driver):
     over_score = driver.overtake_score
     loss_score = driver.loss_score
     
+    # Get lapping counts
+    lappings = driver.lappings_count
+    lapped_by = driver.lapped_by_count
+    
     avg_loss_overtakes = rc_basic.get("avg_time_lost_overtakes", 0.0)
     avg_loss_losses = rc_basic.get("avg_time_lost_losses", 0.0)
     avg_loss_lappings = rc_lap.get("avg_time_lost_lappings", 0.0)
     avg_loss_lapped = rc_lap.get("avg_time_lost_lapped", 0.0)
     
-    eff_over = max(0.0, min(1.0, 1 - safe_div(avg_loss_overtakes, driver.median_clean)))
-    eff_lost = max(0.0, min(1.0, 1 - safe_div(avg_loss_losses, driver.median_clean)))
-    eff_lapping = max(0.0, min(1.0, 1 - safe_div(avg_loss_lappings, driver.median_clean)))
-    eff_lapped = max(0.0, min(1.0, 1 - safe_div(avg_loss_lapped, driver.median_clean)))
+    # Use best_10pct (10th percentile) as baseline for all efficiency metrics
+    # This provides a consistent "fast lap" reference across all traffic situations
+    # If no overtakes/lappings occurred, efficiency = 0% (no credit for not doing it)
+    # If never lost position or lapped, efficiency = 100% (perfect - defended/stayed ahead!)
+    eff_over = 0.0 if overtakes == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_overtakes, driver.best_10pct)))
+    eff_lost = 1.0 if losses == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_losses, driver.best_10pct)))
+    eff_lapping = 0.0 if lappings == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_lappings, driver.best_10pct)))
+    eff_lapped = 1.0 if lapped_by == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_lapped, driver.best_10pct)))
 
     
     racecraft_index = (
@@ -1207,21 +1319,16 @@ def compute_driver_performance_indices(driver_data_dict, global_hot_lap, lap_pos
     dpi_results = []
     
     for driver_key, driver in driver_data_dict.items():
-        if lap_positions is None:
-            continue
+        # Analyze overtakes and losses (requires lap_positions)
+        if lap_positions and driver_key in lap_positions:
+            driver.racecraft_basic = analyze_overtakes_and_losses(driver, driver_data_dict, lap_positions, racecraft_debug_list)
+        else:
+            driver.racecraft_basic = {}
         
-        driver.racecraft_basic = analyze_overtakes_and_losses(
-            driver,
-            driver_data_dict,
-            lap_positions,
-            racecraft_debug_list
-        )
-        
-        driver.racecraft_lap = analyze_lapping_events(
-            driver,
-            driver_data_dict,
-            lap_positions
-        )
+        # Analyze lapping events (uses cumulative lap times, doesn't need lap_positions)
+        driver.racecraft_lap = analyze_lapping_events(driver, driver_data_dict)
+        driver.lappings_count = driver.racecraft_lap.get("lapped_others", 0)
+        driver.lapped_by_count = driver.racecraft_lap.get("lapped_by_others", 0)
     
     check_overtake_losses_balance(racecraft_debug_list)
     
@@ -1837,12 +1944,13 @@ def print_pdf_driver_perf_components(elements, dpi_results):
         "<b>Incident Avoidance</b>: Having no incidents gives 100%; averaging one or more incidents per race minute gives 0%.",
         "<b>Incident Time Lost</b>: Losing no time to incidents gives 100%; losing 7% or more of raced time gives 0%.",
         "<b>Fade Resistance</b>: Matching early pace in the final quarter gives 100%; being 25% slower gives 0%",
-        "<b>On-track Overtakes</b>: Making more on-track overtakes than 95% of drivers gives 100%; fewer gives a lower score.",
-        "<b>On-track Losses</b>: Being passed on-track more times than 95% of drivers gives 0%; fewer than 5% gives 100%. ",
-        "<b>Overtake Efficiency</b>: Losing no time doing overtakes compared to a clean lap gives 100%; losing a full clean-lap’s worth of time gives 0%.",
-        "<b>Losses Efficiency</b>: Losing no time being overtaken compared to a clean lap gives 100%; losing a full clean-lap’s worth of time gives 0%.",
-        "<b>Lapping Efficiency</b>: Losing no time lapping others compared to a clean lap gives 100%; losing a full clean-lap’s worth of time gives 0%.",
-        "<b>Lapped Efficiency</b>: Losing no time being lapped compared to a clean lap gives 100%; losing a full clean-lap’s worth of time gives 0%.",
+        "<b>On-track Overtakes</b>: Making more on-track overtakes than 95% of what other drivers did gives 100%, Fewer overtakes reduce the score linearly with rank across all drivers, drivers with no overtakes typically score near 0%.",
+        "<b>On-track Losses</b>: Being passed fewer times than 95% of other drivers gives 100%. More losses reduce the score linearly with rank across all drivers, drivers passed most often score near 0%",
+        "<b>Traffic Efficiency Metrics</b>: All efficiency metrics below show how close you were to your fast laps (10th percentile) during traffic situations. Only actual on-track events are included in those metrics, not events when one of the drivers were in the pits or had a major incident lap (15s worse than a clean lap).",
+        "<b>Overtake Efficiency</b>: Losing no time doing overtakes compared to fast laps gives 100%, 85% means overtakings took on average 15% longer than a fast lap.",
+        "<b>Losses Efficiency</b>: Losing no time being overtaken compared to fast laps gives 100%, 85% means being passed took on average 15% longer than a fast lap.",
+        "<b>Lapping Efficiency</b>: Losing no time lapping others compared to fast laps gives 100%, 85% means lapping someone took on average 15% longer than a fast lap.",
+        "<b>Lapped Efficiency</b>: Losing no time being lapped compared to fast laps gives 100%, 85% means being lapped took on average 15% longer than a fast lap."
     ]
 
     """
@@ -1937,10 +2045,4 @@ if __name__ == "__main__":
         sys.exit(130)
     except Exception:
         logger.exception("Fatal error:")
-        sys.exit(1) 
-  
-"""    except Exception as e:
-        logger.error("Fatal error: %s", e)
-        if args.verbose:
-            logger.exception("Stack trace:")
-        sys.exit(1)"""
+        sys.exit(1)
