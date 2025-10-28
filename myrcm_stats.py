@@ -40,8 +40,8 @@ class Config:
     """Global configuration constants for race analysis."""
     # Incident thresholds
     EVENT_THRESHOLD = 3.0
-    FUEL_MIN_LOSS = 4.5
-    MAJOR_EVENT_THRESHOLD = 15.0
+    FUEL_MIN_LOSS = 3.8
+    MAJOR_EVENT_THRESHOLD = 12.0
 
     FUEL_WINDOW = (230, 360)
     STANDARD_FUEL_STINT = 245
@@ -58,7 +58,7 @@ class Config:
             "weight": 0.4,
             "components": {
                 "Best Lap": 0.2,
-                "% <3% Laps": 0.5,
+                "% <4% Laps": 0.5,
                 "90% Lap": 0.3,
             },
         },
@@ -98,6 +98,9 @@ class DriverData:
     raw_entries: List
     lap_times: np.ndarray
     
+    # === Additional Identity ===
+    finishing_position: Optional[int] = None
+    
     # === Position Tracking ===
     positions: List[Optional[int]] = field(default_factory=list)
     
@@ -113,7 +116,7 @@ class DriverData:
     total_raced_time: float = 0.0
     
     # === Speed Metrics ===
-    laps_within_3pct: float = 0.0
+    laps_within_4pct: float = 0.0
     
     # === Consistency Metrics ===
     consistency_pct: float = 0.0
@@ -146,13 +149,15 @@ class DriverData:
     
     @classmethod
     def from_csv_data(cls, driver_key: str, full_name: str, car_number: str, 
-                      official_laps: int, raw_entries: List, parsed_times: List) -> 'DriverData':
+                      official_laps: int, raw_entries: List, parsed_times: List,
+                      finishing_position: Optional[int] = None) -> 'DriverData':
         """Factory method to create DriverData from CSV parsing results."""
         return cls(
             driver_key=driver_key,
             full_name=full_name,
             car_number=car_number,
             no_of_laps=official_laps,
+            finishing_position=finishing_position,
             raw_entries=raw_entries,
             lap_times=np.array(parsed_times)
         )
@@ -197,14 +202,14 @@ class DriverData:
         else:
             self.fade_resistance = 1.0
     
-    def compute_laps_within_3pct(self, global_hot_lap: float):
-        """Calculate percentage of laps within 3% of global hot lap."""
+    def compute_laps_within_4pct(self, global_hot_lap: float):
+        """Calculate percentage of laps within 4% of global hot lap."""
         if global_hot_lap and self.no_of_laps > 1:
             laps_excluding_first = self.lap_times[1:]
-            within_mask = laps_excluding_first <= (global_hot_lap * 1.03)
-            self.laps_within_3pct = round(100.0 * np.sum(within_mask) / len(laps_excluding_first), 1)
+            within_mask = laps_excluding_first <= (global_hot_lap * 1.04)
+            self.laps_within_4pct = round(100.0 * np.sum(within_mask) / len(laps_excluding_first), 1)
         else:
-            self.laps_within_3pct = 0.0
+            self.laps_within_4pct = 0.0
     
     def get_display_name(self) -> str:
         """Get formatted display name with car number."""
@@ -428,7 +433,8 @@ def load_race_metadata(csv_file: str) -> tuple[pd.DataFrame, dict]:
             driver_name = row[3].strip()
             car_no = row[1].strip()
             laps = int(row[5].strip())
-            raw_driver_info.append((driver_name, car_no, laps))
+            finishing_pos = int(row[0].strip()) if row[0].strip().isdigit() else None
+            raw_driver_info.append((driver_name, car_no, laps, finishing_pos))
 
     try:
         df = pd.read_csv(csv_file, skiprows=lap_start_line)
@@ -472,7 +478,7 @@ def build_driver_lap_data(df, meta):
         if idx < len(raw_driver_info):
             driver_lookup[driver] = raw_driver_info[idx]
         else:
-            driver_lookup[driver] = (driver, "?", 0)
+            driver_lookup[driver] = (driver, "?", 0, None)
     
     driver_data_dict = {}
     n_rows = df.shape[0]
@@ -485,13 +491,14 @@ def build_driver_lap_data(df, meta):
             if not (isinstance(t, float) and math.isnan(t)):
                 parsed_times.append(t)
         
-        full_name, car_no, official_laps = driver_lookup.get(driver_key, (driver_key, "?", 0))
+        full_name, car_no, official_laps, finishing_pos = driver_lookup.get(driver_key, (driver_key, "?", 0, None))
         
         driver_data_dict[driver_key] = DriverData.from_csv_data(
             driver_key=driver_key,
             full_name=full_name,
             car_number=car_no,
             official_laps=official_laps,
+            finishing_position=finishing_pos,
             raw_entries=raw_entries,
             parsed_times=parsed_times
         )
@@ -659,12 +666,10 @@ def build_summary_row(driver, pos_idx):
         "Driver (No)": driver.get_display_name(),
         "Laps": driver.no_of_laps,
         "Race Time": format_time_mm_ss_decimal(driver.total_raced_time),
-        "Best Lap": format_time_ss_decimal(driver.best_lap),# PART 3: Continuation and remaining functions
-# This continues build_summary_row from Part 2
-
+        "Best Lap": format_time_ss_decimal(driver.best_lap),
         "90 percentile lap": f"{driver.median_clean:.2f}" if driver.median_clean else "0.00",
         "Consistency": f"{driver.consistency_pct:.1f}%",
-        "Laps within 3% of hot lap": f"{driver.laps_within_3pct:.0f}%",
+        "Laps within 4% of hot lap": f"{driver.laps_within_4pct:.0f}%",
         "Fuel Stops": len(driver.fuel_stops_idx),
         "Avg Fuel Interval": format_time_mm_ss(avg_fuel_interval),
         "Avg Fuel Stop Time": format_time_ss_decimal(avg_fuel_stop_time),
@@ -770,7 +775,7 @@ def analyze_driver_events(driver_data_dict, lap_positions, meta, global_hot_lap)
         driver.compute_best_10pct_lap()
         classify_driver_events(driver, lap_positions, race_duration_sec)
         driver.compute_best_lap(exclude_first=True)
-        driver.compute_laps_within_3pct(global_hot_lap)
+        driver.compute_laps_within_4pct(global_hot_lap)
         driver.compute_consistency_metrics()
         driver.compute_fade_resistance()
         
@@ -786,7 +791,7 @@ def analyze_driver_events(driver_data_dict, lap_positions, meta, global_hot_lap)
         summary_df = award_trophies(summary_df, "Best Lap", higher_is_better=False)
         summary_df = award_trophies(summary_df, "90 percentile lap", higher_is_better=False)
         summary_df = award_trophies(summary_df, "Consistency", higher_is_better=True)
-        summary_df = award_trophies(summary_df, "Laps within 3% of hot lap", higher_is_better=True)
+        summary_df = award_trophies(summary_df, "Laps within 4% of hot lap", higher_is_better=True)
     
     return summary_df, verbose_log
 
@@ -966,6 +971,7 @@ def check_overtake_losses_balance(global_racecraft_debug, tolerance=0):
             f"Warning: overtake/loss mismatch detected: {total_overtakes} overtakes vs {total_losses} losses "
             f"(diff={diff}, tolerance={tolerance})"
         )
+
 def analyze_lapping_events(driver: DriverData, all_drivers: dict[str, DriverData]):
     """
     Analyze lapping and being-lapped events for a given driver.
@@ -1119,6 +1125,7 @@ def analyze_lapping_events(driver: DriverData, all_drivers: dict[str, DriverData
         "avg_time_lost_lappings": avg_time_lost_lapping,
         "avg_time_lost_lapped": avg_time_lost_lapped,
     }
+
 def compute_racecraft_caps(driver_data_dict, over_pct=95, loss_pct=95):
     """Compute percentile caps for overtakes/losses normalization."""
     over_list = []
@@ -1192,12 +1199,12 @@ def compute_speed_index(driver, class_ref):
     
     best_ratio = best_ref / driver.best_lap if driver.best_lap > 0 else 0
     p90_ratio = p90_ref / driver.median_clean if driver.median_clean > 0 else 0
-    laps_within_3pct = driver.laps_within_3pct / 100.0
+    laps_within_4pct = driver.laps_within_4pct / 100.0
     
     speed_index = (
         SWC["Best Lap"]   * best_ratio +
         SWC["90% Lap"]    * p90_ratio +
-        SWC["% <3% Laps"] * laps_within_3pct
+        SWC["% <4% Laps"] * laps_within_4pct
     )
     speed_index = max(0.0, min(speed_index, 1.0))
     
@@ -1206,7 +1213,7 @@ def compute_speed_index(driver, class_ref):
         "best_ratio": best_ratio,
         "p90_lap": driver.median_clean,
         "p90_ratio": p90_ratio,
-        "laps_within_3pct": driver.laps_within_3pct,
+        "laps_within_4pct": driver.laps_within_4pct,
     }
     
     return speed_index, breakdown
@@ -1271,7 +1278,23 @@ def compute_racecraft_index(driver):
     # This provides a consistent "fast lap" reference across all traffic situations
     # If no overtakes/lappings occurred, efficiency = 0% (no credit for not doing it)
     # If never lost position or lapped, efficiency = 100% (perfect - defended/stayed ahead!)
-    eff_over = 0.0 if overtakes == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_overtakes, driver.best_10pct)))
+    # Exception: wire-to-wire winners (started P1, finished P1, held P1 throughout, 0 overtakes) get 100% overtake efficiency
+    
+    # Check for wire-to-wire victory
+    # car_number is the starting position (grid position)
+    # finishing_position is where they finished
+    started_p1 = (driver.car_number == "1")
+    finished_p1 = (driver.finishing_position == 1)
+    
+    # Check if driver held P1 throughout the entire race
+    held_p1_throughout = False
+    if driver.positions:
+        # All non-None positions must be 1 (never dropped from first place)
+        held_p1_throughout = all(pos == 1 for pos in driver.positions if pos is not None)
+    
+    wire_to_wire = started_p1 and finished_p1 and held_p1_throughout and overtakes == 0
+    
+    eff_over = 1.0 if wire_to_wire else (0.0 if overtakes == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_overtakes, driver.best_10pct))))
     eff_lost = 1.0 if losses == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_losses, driver.best_10pct)))
     eff_lapping = 0.0 if lappings == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_lappings, driver.best_10pct)))
     eff_lapped = 1.0 if lapped_by == 0 else max(0.0, min(1.0, 1 - safe_div(avg_loss_lapped, driver.best_10pct)))
@@ -1339,9 +1362,28 @@ def compute_driver_performance_indices(driver_data_dict, global_hot_lap, lap_pos
         overtakes = rc_basic.get("overtakes", 0) or 0
         losses = rc_basic.get("losses", 0) or 0
         
+        # Check for wire-to-wire victory: started P1, finished P1, zero overtakes
+        # This driver deserves full credit for overtake metrics despite no overtakes
+        # car_number is the starting position (grid position)
+        # finishing_position is where they finished
+        started_p1 = (driver.car_number == "1")
+        finished_p1 = (driver.finishing_position == 1)
+        
+        # Check if driver held P1 throughout the entire race
+        held_p1_throughout = False
+        if driver.positions:
+            # All non-None positions must be 1 (never dropped from first place)
+            held_p1_throughout = all(pos == 1 for pos in driver.positions if pos is not None)
+        
+        wire_to_wire = started_p1 and finished_p1 and held_p1_throughout and overtakes == 0
+        
         over_score, loss_score = compute_overtake_loss_scores(
             overtakes, losses, cap_over, cap_loss
         )
+        
+        # Award perfect score for wire-to-wire victories
+        if wire_to_wire:
+            over_score = 1.0
         
         driver.overtake_score = over_score
         driver.loss_score = loss_score
@@ -1500,7 +1542,7 @@ def print_pdf_summary_table(elements, summary_df, styles):
         Paragraph("Best<br/>Lap", center_bold),
         Paragraph("90 percentile lap", center_bold),
         Paragraph("Consistency", center_bold),
-        Paragraph("Laps<br/>within 3%<br/>of hot lap", center_bold),
+        Paragraph("Laps<br/>within 4%<br/>of hot lap", center_bold),
         Paragraph("Fuel<br/>Stops", center_bold),
         Paragraph("Avg Fuel<br/>Interval", center_bold),
         Paragraph("Avg Fuel<br/>Stop Time", center_bold),
@@ -1516,7 +1558,7 @@ def print_pdf_summary_table(elements, summary_df, styles):
 
     table_data = [header_row] + summary_df[[
         "Pos","Driver (No)","Laps","Race Time","Best Lap","90 percentile lap","Consistency",
-        "Laps within 3% of hot lap","Fuel Stops","Avg Fuel Interval","Avg Fuel Stop Time",
+        "Laps within 4% of hot lap","Fuel Stops","Avg Fuel Interval","Avg Fuel Stop Time",
         "Events/Incidents","Fuel Time Lost","Events Time Lost"
     ]].values.tolist()
 
@@ -1552,7 +1594,7 @@ def print_pdf_summary_table(elements, summary_df, styles):
         note_style))
     elements.append(Spacer(1, 2))
     elements.append(Paragraph(
-        "Note: 'Laps within 3% of hot lap' is the percentage of a drivers laps that were within 3% of the best lap of the race across all drivers.",
+        "Note: 'Laps within 4% of hot lap' is the percentage of a drivers laps that were within 4% of the best lap of the race across all drivers.",
         note_style
     ))
     
@@ -1789,7 +1831,7 @@ def print_pdf_driver_perf_summary(elements, dpi_results):
     note_text = [
         "<b>Understanding the Driver Performance Index (DPI):</b>",
         "",
-        "<b>Speed</b> measures how fast you are compared to other drivers. It looks at your best lap time, how many of your laps were within 3% of the fastest lap in the race, and your best 90% of laps (excluding your worst 10% of laps). A higher Speed score means you were consistently quick.",
+        "<b>Speed</b> measures how fast you are compared to other drivers. It looks at your best lap time, how many of your laps were within 4% of the fastest lap in the race, and your best 90% of laps (excluding your worst 10% of laps). A higher Speed score means you were consistently quick.",
         "",
         "<b>Consistency</b> measures how steady and clean your driving was. It considers how similar your lap times were to each other, how many incidents (mistakes, crashes, or delays) you had, how much time you lost due to those incidents, and whether you maintained your pace throughout the race (fade resistance). A higher Consistency score means you drove smoothly with fewer mistakes.",
         "",
@@ -1827,7 +1869,7 @@ def print_pdf_driver_perf_components(elements, dpi_results):
         [
             "Driver",
             "Best Lap",
-            "Within 3%\nLaps",
+            "Within 4%\nLaps",
             "90% Lap",
             "Consistency",
             "Incident\nAvoidance",
@@ -1871,7 +1913,7 @@ def print_pdf_driver_perf_components(elements, dpi_results):
         comp_data.append([
             f"{r['Driver']} ({r['Car']})",
             f"{c.get('best_ratio', 0)*100:.1f}% ({c.get('best_lap', 0):.3f})",
-            f"{c.get('laps_within_3pct', 0):.1f}%",
+            f"{c.get('laps_within_4pct', 0):.1f}%",
             f"{c.get('p90_ratio', 0)*100:.1f}% ({c.get('p90_lap', 0):.3f})",
             f"{c.get('consistency_pct', 0):.1f}%",
             f"{c.get('incident_density_score', 0)*100:.1f}%",
@@ -1938,7 +1980,7 @@ def print_pdf_driver_perf_components(elements, dpi_results):
 
     note_lines = [
         "<b>Best Lap</b>: 100% equals the race’s fastest lap, while 98% means the lap was 2% slower than the hot lap",
-        "<b>Within 3% Laps</b>: % of driver’s laps within 3% of the overall fastest lap.",
+        "<b>Within 4% Laps</b>: % of driver’s laps within 4% of the overall fastest lap.",
         "<b>90% Lap</b>: 100% means the driver's best 90% of laps were the fastest across all drivers, while 96% means that driver's best 90% of laps were 4% slower.",
         "<b>Consistency</b>: Measures how evenly paced the driver’s laps are. 100% means every lap time is identical; more variation lowers the score ((1 − σ/μ) × 100)",
         "<b>Incident Avoidance</b>: Having no incidents gives 100%; averaging one or more incidents per race minute gives 0%.",
@@ -1947,7 +1989,7 @@ def print_pdf_driver_perf_components(elements, dpi_results):
         "<b>On-track Overtakes</b>: Making more on-track overtakes than 95% of what other drivers did gives 100%, Fewer overtakes reduce the score linearly with rank across all drivers, drivers with no overtakes typically score near 0%.",
         "<b>On-track Losses</b>: Being passed fewer times than 95% of other drivers gives 100%. More losses reduce the score linearly with rank across all drivers, drivers passed most often score near 0%",
         "<b>Traffic Efficiency Metrics</b>: All efficiency metrics below show how close you were to your fast laps (10th percentile) during traffic situations. Only actual on-track events are included in those metrics, not events when one of the drivers were in the pits or had a major incident lap (15s worse than a clean lap).",
-        "<b>Overtake Efficiency</b>: Losing no time doing overtakes compared to fast laps gives 100%, 85% means overtakings took on average 15% longer than a fast lap.",
+        "<b>Overtake Efficiency</b>: Losing no time doing overtakes compared to fast laps gives 100%, 85% means overtakings took on average 15% longer than a fast lap. Making no overtakes gives 0% unless you lead start-to-finsih which gives 100%.",
         "<b>Losses Efficiency</b>: Losing no time being overtaken compared to fast laps gives 100%, 85% means being passed took on average 15% longer than a fast lap.",
         "<b>Lapping Efficiency</b>: Losing no time lapping others compared to fast laps gives 100%, 85% means lapping someone took on average 15% longer than a fast lap.",
         "<b>Lapped Efficiency</b>: Losing no time being lapped compared to fast laps gives 100%, 85% means being lapped took on average 15% longer than a fast lap."

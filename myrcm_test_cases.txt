@@ -41,7 +41,7 @@ https://myrcm.ch/myrcm/report/en/88595/364647 Final A run 2
 # Verify graceful handling of a class that had no final results posted 
 https://myrcm.ch/myrcm/report/en/89707/367788 Final A ; expect=2
 
-# Verify that a 5 min race is auto classisifed to be a nofuel race
+# Verify that a 5 min race is auto classisifed to be a nofuel race + leader from start to finish gets 100% overtakes scores
 https://myrcm.ch/myrcm/report/en/89707/367790# Final A run 2
 
 # Verify that a 1:12 race is classified as nofuel 
@@ -49,3 +49,9 @@ https://myrcm.ch/myrcm/report/en/83771/350310 Final A run 1
 
 # Verify that the erronoues driver with start No 0 is handled how???
 https://myrcm.ch/myrcm/report/en/89911/368333 Final C
+
+# Nitro 1/8 45 min, very short fuel stops, sub 4 seconds, by Simon KURZBUCH 
+https://www.myrcm.ch/myrcm/report/en/89374/366923 Final A
+
+# Nitro 1/8 buggy 45 minutes, fuel stops detected?
+https://www.myrcm.ch/myrcm/report/en/89955/368453 Final A
