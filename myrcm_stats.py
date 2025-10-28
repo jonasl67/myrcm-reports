@@ -1461,7 +1461,7 @@ def print_pdf_cover_header(elements, meta, styles):
         fontName="Helvetica"
     )
     note_text = (
-        "<b>Disclaimer - This is not an official myrcm.ch report!</b><br/>"
+        "<b>Disclaimer - This is not an official myrcm.ch report, it is using myrcm.ch data under permission.</b><br/>"
         "This report is purely based on the data published on myrcm.ch for the race, "
         "automated software has generated the report from the data. The software makes a lot of "
         "assumptions based on typical rc car races to arrive at the information presented in the summary table and event log. "
